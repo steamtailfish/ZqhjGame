@@ -1,0 +1,3 @@
+# Audited Windows release baseline; no learning/vision dependencies in this phase.
+redis==8.1.0
+PyYAML==6.0.3

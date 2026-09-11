@@ -1,0 +1,9 @@
+# Install torch/torchvision from the selected official CPU or CUDA index first.
+torch==2.7.1
+torchvision==0.22.1
+ultralytics==8.4.77
+numpy==2.2.6
+opencv-python==5.0.0.93
+Pillow==12.3.0
+redis==8.1.0
+PyYAML==6.0.3

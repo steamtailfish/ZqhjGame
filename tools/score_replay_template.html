@@ -1,0 +1,55 @@
+<div id="score-replay">
+<style>
+#score-replay {color:var(--foreground);font-family:inherit}
+#score-replay .replay-grid {display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1fr);gap:20px}
+#score-replay .camera-grid {display:grid;gap:12px}
+#score-replay img {max-width:100%;display:block}
+#score-replay .camera-view {display:grid;grid-template-columns:2fr 1fr;gap:8px;align-items:center}
+#score-replay .path {fill:none;stroke-width:1.5}
+#score-replay .axis-title,#score-replay svg text {fill:var(--foreground)}
+#score-replay .domain,#score-replay .tick line {stroke:var(--border)}
+@media(max-width:650px){#score-replay .replay-grid{grid-template-columns:1fr}}
+</style>
+<h3>__RUN_TITLE__</h3>
+<div class="viz-controls">
+<label class="form-label">仿真时间 <output id="replay-time">85秒</output><input class="form-range" id="replay-slider" type="range" min="0" max="__MAX_TIME__" step="1" value="85"></label>
+</div>
+<div class="replay-grid"><div><div id="replay-plot"></div><div id="replay-status" aria-live="polite"></div></div><div class="camera-grid" id="replay-cameras"></div></div>
+<div class="text-small">航迹：自身公开位置；图片：框对应的原始照片及局部放大；OBSERVE仅代表控制意图。</div>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script>
+(() => {
+const root=document.getElementById('score-replay'), data=__REPLAY_DATA__;
+const plot=root.querySelector('#replay-plot'),slider=root.querySelector('#replay-slider');
+const colors=['var(--viz-series-1)','var(--viz-series-2)','var(--viz-series-3)'];
+let current=85;
+function draw(){
+ const width=plot.clientWidth,height=340,m={left:64,right:20,top:25,bottom:50};
+ const all=data.agents.flatMap(a=>a.rows),xd=d3.extent(all,r=>r[1]),yd=d3.extent(all,r=>r[2]);
+ const x=d3.scaleLinear().domain([xd[0]-150,xd[1]+150]).range([m.left,width-m.right]);
+ const y=d3.scaleLinear().domain([yd[0]-150,yd[1]+150]).range([height-m.bottom,m.top]);
+ plot.replaceChildren();const svg=d3.select(plot).append('svg').attr('viewBox',`0 0 ${width} ${height}`).attr('role','img').attr('aria-label','三机相对公共中心的实际航迹，单位米');
+ svg.append('rect').attr('data-chart-frame','').attr('x',m.left).attr('y',m.top).attr('width',width-m.left-m.right).attr('height',height-m.top-m.bottom).attr('fill','none').attr('stroke','var(--border)');
+ svg.append('g').attr('transform',`translate(0,${height-m.bottom})`).call(d3.axisBottom(x).ticks(width<400?3:5));
+ svg.append('g').attr('transform',`translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5));
+ svg.append('text').attr('class','axis-title').attr('data-axis','x').attr('x',(m.left+width-m.right)/2).attr('y',height-10).attr('text-anchor','middle').text('东向位移（米）');
+ svg.append('text').attr('class','axis-title').attr('data-axis','y').attr('transform',`translate(15,${height/2}) rotate(-90)`).attr('text-anchor','middle').text('北向位移（米）');
+ let states=[];root.querySelector('#replay-cameras').replaceChildren();
+ data.agents.forEach((a,i)=>{
+  const shown=a.rows.filter(r=>r[0]<=current);const r=shown.at(-1)||a.rows[0];
+  svg.append('path').datum(shown).attr('class','path').attr('stroke',colors[i]).attr('d',d3.line().x(r=>x(r[1])).y(r=>y(r[2])));
+  svg.append('circle').attr('cx',x(r[1])).attr('cy',y(r[2])).attr('r',5).attr('fill',colors[i]);
+  svg.append('text').attr('x',x(r[1])+7).attr('y',y(r[2])-8).text(a.uid.slice(-1));
+  states.push(`${a.uid}：${r[3]}，${r[4]}名队友`);
+  const photo=a.photos.reduce((p,q)=>Math.abs(q.t-current)<Math.abs(p.t-current)?q:p);
+  const section=document.createElement('div'),label=document.createElement('div');label.textContent=`${a.uid} · 照片 ${photo.t.toFixed(1)}秒 · ${photo.label}`;
+  section.append(label);const imgs=document.createElement('div');imgs.className='camera-view';
+  for(const key of ['full','crop']){if(photo[key]){const image=document.createElement('img');image.src=photo[key];image.alt=key==='full'?'本机照片，红框为所选检测':'所选框的局部放大';imgs.append(image);}}
+  section.append(imgs);root.querySelector('#replay-cameras').append(section);
+ });
+ root.querySelector('#replay-status').textContent=states.join('；');root.querySelector('#replay-time').textContent=`${current}秒`;
+}
+slider.addEventListener('input',()=>{current=Number(slider.value);draw()});new ResizeObserver(draw).observe(plot);draw();
+})();
+</script>
+</div>

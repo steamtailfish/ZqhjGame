@@ -1,0 +1,3 @@
+# Optional CPU verification environment; separate from the official agent runtime.
+--index-url https://download.pytorch.org/whl/cpu
+torch==2.7.1

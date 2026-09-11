@@ -1,0 +1,318 @@
+{
+  "recorded_utc": "2026-09-07T07:11:51.985487+00:00",
+  "git_commit": "4346c8b26f3fbe97b2c071ce82a73f0d940fca40",
+  "version": "OpenSim 2.0.3\nBuild: 2026-09-03T09:45:29Z\nPlatform: win-x64\nMin Windows: 10 1809+\nNode: v22.11.0\nRedis: redis-windows-fork (bundled from C:\\Users\\open\\Documents\\Unreal Projects\\opensim\\external\\redis)\n",
+  "python": {
+    "executable": "D:\\catkin_ws\\hf2026-sim-windows\\python\\python.exe",
+    "version": "3.12.13 (main, Jun 23 2026, 15:23:43) [MSC v.1944 64 bit (AMD64)]",
+    "packages": {
+      "redis": "8.1.0",
+      "pyyaml": "6.0.3",
+      "pip": "26.1.2"
+    }
+  },
+  "platform": "Windows-11-10.0.26200-SP0",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 3477,
+      "sha256": "1fbbebbf667af27c39d6fef444e9f5a114f07850ddac767228a37e3e836bd1d5"
+    },
+    {
+      "path": "SDK-API.md",
+      "bytes": 33254,
+      "sha256": "069fdbcf1079bcdbafbd50069b53057b89475db8bd0af6e0c7729fb9709312df"
+    },
+    {
+      "path": "VERSION",
+      "bytes": 207,
+      "sha256": "2e947794194883e6815dbd389c9a2db89f44541eed43d23777572bb03a58f3a1"
+    },
+    {
+      "path": "bin/node.exe",
+      "bytes": 80511640,
+      "sha256": "7447c4ece014aa41fb2ff866c993c708e5a8213a00913cc2ac5049ea3ffc230d"
+    },
+    {
+      "path": "bin/redis-server.exe",
+      "bytes": 5828706,
+      "sha256": "e15557044cd450cd5d82f93de52dfd18e23ce3c15d0c07fde0ffb0f70225936d"
+    },
+    {
+      "path": "competition/__main__.py",
+      "bytes": 202,
+      "sha256": "43baf0d38f5881c10d8fd2cdc5757ce18269d20a08db36e70c8e93aebe989bd8"
+    },
+    {
+      "path": "competition/baselines/coop_distributed.py",
+      "bytes": 19353,
+      "sha256": "79f211261c41713ddccd4a4ab69e82b1c68aba739975db600be30cc01ca66c09"
+    },
+    {
+      "path": "competition/scenarios/coop_decoy/config/algorithm.yaml",
+      "bytes": 621,
+      "sha256": "f879e37cabdccf2f95c6a03a6649b0a06a4b3ac2d28984c87b1c18586e45f125"
+    },
+    {
+      "path": "competition/scenarios/coop_decoy/scenario.json",
+      "bytes": 42513,
+      "sha256": "eeeab61eaf774d409ddd777ac8785b9cbde5d288fd5cf97352b07042218d620c"
+    },
+    {
+      "path": "competition/sdk/_vendored/__init__.py",
+      "bytes": 389,
+      "sha256": "95fe6080daa0b2fbd07a969baba77844a4d59a17250f7faae13104d929134d6f"
+    },
+    {
+      "path": "competition/sdk/_vendored/coop_eval.py",
+      "bytes": 42232,
+      "sha256": "c976d6eaa9fe569d648edb70b6df1480de5017b9e69d7e6640731dd51a5e4756"
+    },
+    {
+      "path": "competition/sdk/_vendored/geometry.py",
+      "bytes": 2167,
+      "sha256": "00988a8a6de76c46e71cdebe279e5e56cf6e2de0f981882f8d055df969c0b516"
+    },
+    {
+      "path": "competition/sdk/_vendored/metrics_summary.py",
+      "bytes": 2673,
+      "sha256": "b656956ae9d98e32a985627eea54f7d31e151a883d80581eabd605c55d42a813"
+    },
+    {
+      "path": "competition/sdk/_vendored/score_publisher.py",
+      "bytes": 8008,
+      "sha256": "f9aef9188e7d950431857eb3df2e074669532f0f741f6a7195d2de1a09219b1c"
+    },
+    {
+      "path": "competition/sdk/_vendored/sim_runner.py",
+      "bytes": 7285,
+      "sha256": "65560b368ae2f64edc9bb1eb7989ffadf1fc838b145c071d8a3601e295128e27"
+    },
+    {
+      "path": "competition/sdk/_vendored/target_motion.py",
+      "bytes": 2615,
+      "sha256": "7da6c1580de90ce0e82bae26eaafbf6922fbac305000c3a9bba02ea11dba5685"
+    },
+    {
+      "path": "competition/sdk/_vendored/uav_target_map.py",
+      "bytes": 5212,
+      "sha256": "df5160af012c3bc995892f277ada8bd68dc4f8c8376b0dfb43d51600b230f3d0"
+    },
+    {
+      "path": "competition/sdk/cli.py",
+      "bytes": 10341,
+      "sha256": "5b983c0508562437e9b6fcb6098962c71106bdde951318ee65e3aa6807207f66"
+    },
+    {
+      "path": "competition/sdk/core/__init__.py",
+      "bytes": 72,
+      "sha256": "aa756960a94ba8b9aaf23815935536fb423aebd5d419d1fa3c03caa7508e1235"
+    },
+    {
+      "path": "competition/sdk/core/agent.py",
+      "bytes": 3434,
+      "sha256": "c1070244078eab25091ba9de2a49d1862da2ed9efaf8f9bfc7c0fddb4593efa9"
+    },
+    {
+      "path": "competition/sdk/core/client.py",
+      "bytes": 5033,
+      "sha256": "ccb576c49de2c4735aa9c0bc4c0281358b9c335a7c1d3ac75f7ff42fb854acaa"
+    },
+    {
+      "path": "competition/sdk/core/commands.py",
+      "bytes": 7093,
+      "sha256": "7fb0f73cd669932b459d6bf7c8f4b53c7c175f13a6915511d0a264e31e230c75"
+    },
+    {
+      "path": "competition/sdk/core/isolation.py",
+      "bytes": 5763,
+      "sha256": "3b2cad201b01f50fcb964999cba43e278c142a723f08f3e03ff93487bd1afcf9"
+    },
+    {
+      "path": "competition/sdk/core/observation.py",
+      "bytes": 9483,
+      "sha256": "1969476b5359ef3596e77e1c48573e108219b649dde4fc3aa7f3cb393aac386e"
+    },
+    {
+      "path": "competition/sdk/core/perception/__init__.py",
+      "bytes": 469,
+      "sha256": "03ad9dc9cc043530a31cb59d506e2f17ed3502242ccc16a7fded2bbe6fc8ddd4"
+    },
+    {
+      "path": "competition/sdk/core/perception/base.py",
+      "bytes": 1327,
+      "sha256": "83176622f27ceabab703d10e3036376e8489f624153e28402d2d7747dd7162af"
+    },
+    {
+      "path": "competition/sdk/core/perception/bbox_to_latlon.py",
+      "bytes": 3272,
+      "sha256": "e1e74145707c81c33e9034bc8785757f7e096c1ca4d5bc2f0d2a07779e0c4725"
+    },
+    {
+      "path": "competition/sdk/core/perception/default_detectors.py",
+      "bytes": 9365,
+      "sha256": "7d135c05ef11aa3ce6fbb66751759c629658e00989eb714dce0453ed048db89a"
+    },
+    {
+      "path": "competition/sdk/core/perception/photo_cache.py",
+      "bytes": 3074,
+      "sha256": "ad1e464909dd4d11b9e2944ee5b09d36fff159d699dbab87104a64623849d903"
+    },
+    {
+      "path": "competition/sdk/core/perception/resolver.py",
+      "bytes": 4371,
+      "sha256": "dd0310fd7e25e0c4d8d430d865da5dd084e9915d8d5f21744a0c1927a92c6f89"
+    },
+    {
+      "path": "competition/sdk/core/runner.py",
+      "bytes": 47917,
+      "sha256": "b97a3d50022750b6ba1662931f47d7acf4c8fb54212bd33149a7e9b3951f65ad"
+    },
+    {
+      "path": "competition/sdk/core/scenario_randomizer.py",
+      "bytes": 10001,
+      "sha256": "0c281ec4bdb8281c8b2e82c1ba4188219ea41a37b8453bc88c6331ddbf3b3359"
+    },
+    {
+      "path": "competition/sdk/core/scoring.py",
+      "bytes": 807,
+      "sha256": "a70b574901376cafd379ad4c97c89396a7ba3f996700da78756bcf5d8e4667ae"
+    },
+    {
+      "path": "competition/sdk/core/world_state.py",
+      "bytes": 5873,
+      "sha256": "c4e228b5bcc7b8664bba1d202281e1e3687e851b51ecdc65a83af7cd7061550d"
+    },
+    {
+      "path": "competition/sdk/scenarios/_astar_navigator.py",
+      "bytes": 32773,
+      "sha256": "2197eee9b374da74f86e2890eb1dcb516c4a5ce95260396bb81b5c561c09a60b"
+    },
+    {
+      "path": "competition/sdk/scenarios/coop_decoy/__init__.py",
+      "bytes": 709,
+      "sha256": "d6e7ff11487433cd9410bd43f66b7e153b70f5b7526976929c2e26eadc8b369e"
+    },
+    {
+      "path": "competition/sdk/scenarios/coop_decoy/agent.py",
+      "bytes": 856,
+      "sha256": "68e09d3d326a0d0983acd11a1d636d2c7663f2d7db5b29fc2cf7cd6a6ca00095"
+    },
+    {
+      "path": "competition/sdk/scenarios/coop_decoy/observation.py",
+      "bytes": 668,
+      "sha256": "fc32026125baecc5325cccff0eaf810021a17c1f4fd8097de718222c3e0250a3"
+    },
+    {
+      "path": "competition/sdk/scenarios/coop_decoy/runner.py",
+      "bytes": 14268,
+      "sha256": "81afb55ffa1ecdf4a32d8ea51c4d4fcac0833c965f5c08dc28afaadc1a456229"
+    },
+    {
+      "path": "competition/user_algorithms/README.md",
+      "bytes": 3173,
+      "sha256": "d088d486bc19f9f04a30ddb8169a9f64e057b7c041f1e7727cd63595d81cb3a6"
+    },
+    {
+      "path": "config/GridDataAll_18.csv",
+      "bytes": 41015230,
+      "sha256": "0e6d5784ce1630d8aaa975b10ec7b13e3fe55b23b60396201a58322561e59717"
+    },
+    {
+      "path": "config/HeightSample.csv",
+      "bytes": 786048817,
+      "sha256": "019e60a6bcbbbbc2fc806b028b15cd9e68b730c156c431399838d4a99d27c316"
+    },
+    {
+      "path": "config/defaults.json",
+      "bytes": 2765,
+      "sha256": "73ea0018fd9cef6714450f28dd93666c1fae65bb0f6b17d7873613b35f5a228e"
+    },
+    {
+      "path": "config/models/gimbal.json",
+      "bytes": 928,
+      "sha256": "a54ac2abd7a9e931da7975f541bae696acf08669e705648ffb86bacdef65eab7"
+    },
+    {
+      "path": "config/models/uav.json",
+      "bytes": 1427,
+      "sha256": "e97bf103490bbb1b25bb011dd325802f736c8e2e27ec89ff24cebd6abcef4883"
+    },
+    {
+      "path": "config/points.json",
+      "bytes": 47211,
+      "sha256": "ffe8341f06e4fbcd375ce1d15a3ec4b3e0d494b02b8e66d7be1d3a68a5675bb6"
+    },
+    {
+      "path": "config/random_routes_20.json",
+      "bytes": 6692,
+      "sha256": "8170e5c2297845fc3a2fe127b2e047c0b56e4a7f0ed9670302114f2522d9d1bf"
+    },
+    {
+      "path": "config/renderers/ue_testwl.json",
+      "bytes": 629,
+      "sha256": "ffc4f2a9054f675584ab5085ebefcb8373abb8243a8e313003d324b8c716ef62"
+    },
+    {
+      "path": "config/schema/sim-commands.schema.json",
+      "bytes": 5505,
+      "sha256": "c05d7e445e131e6e43fe3a46bef2900092552e34e1321e8076c43bb06754d050"
+    },
+    {
+      "path": "config/schema/sim-state.schema.json",
+      "bytes": 6800,
+      "sha256": "e6e4d0fffcbe44352a3d157ca9d8fc8e6627bdf402fe9b6cf5b7bf64a644fe39"
+    },
+    {
+      "path": "config/terrain_bbox.json",
+      "bytes": 106,
+      "sha256": "a5bd0e7072dc5e61b81a52ecb56d036db94e35809728587f130cc9b887e165e8"
+    },
+    {
+      "path": "opensim-sim.exe",
+      "bytes": 954368,
+      "sha256": "375afa30272b386014cb1b1239d521656e8d8cd3356f27ae76293d6d47dbf184"
+    },
+    {
+      "path": "preflight-check.ps1",
+      "bytes": 13477,
+      "sha256": "309b494444bbe049f1695ffeba4cf752ba3470abbcf4f88dd8e888759c77293b"
+    },
+    {
+      "path": "python/python.exe",
+      "bytes": 91648,
+      "sha256": "88b9e780cfdc38597c7f53e20f7165262befa28d9a5e9470360d349e172ecf37"
+    },
+    {
+      "path": "setup.ps1",
+      "bytes": 7148,
+      "sha256": "6b378d7fa14de671e0c4c76df8857700a90dc9fd1d5202b9bf30796de7c8a6b1"
+    },
+    {
+      "path": "start.ps1",
+      "bytes": 27213,
+      "sha256": "27cdde491ea4bccea9ba3a74316abc1ed1d2058526844520576097641bbe44e3"
+    },
+    {
+      "path": "stop.ps1",
+      "bytes": 6857,
+      "sha256": "efab4cdb5e9aa7be518c284e75f76e605fb59a843dce5c771acdc2e4277e3a40"
+    },
+    {
+      "path": "ue-renderer/Windows/testwl/Content/Config/capture_config.json",
+      "bytes": 915,
+      "sha256": "be402aaaf3b545a6242220bed1aa2325e0c730f3b9bc97e035e2fb266e6c5573"
+    },
+    {
+      "path": "verify.ps1",
+      "bytes": 3984,
+      "sha256": "518aba84b922182aaf079e35ac8197867bf6fc1fe003b68e2e282be031379182"
+    },
+    {
+      "path": "红枫2026无人集群自主协同智能算法挑战赛参赛手册.docx",
+      "bytes": 625921,
+      "sha256": "d0f81b5163f6121a66090d956dd0b6161bfd241ea7307907265d5f1e787fa5b3"
+    }
+  ],
+  "note": "Hashes identify this local package; they are not an organizer signature. Hashing does not mean every file was read; consult ENVIRONMENT_AUDIT for review scope."
+}

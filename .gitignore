@@ -1,0 +1,5 @@
+.venv/
+.venv-learning/
+__pycache__/
+*.py[cod]
+artifacts/

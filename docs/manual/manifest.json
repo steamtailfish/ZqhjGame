@@ -1,0 +1,40 @@
+{
+  "source_name": "红枫2026无人集群自主协同智能算法挑战赛参赛手册.docx",
+  "source_sha256": "d0f81b5163f6121a66090d956dd0b6161bfd241ea7307907265d5f1e787fa5b3",
+  "blocks": 186,
+  "tables": 5,
+  "media": [
+    {
+      "name": "word/media/image1.jpeg",
+      "bytes": 21450,
+      "sha256": "79b01e8e74bead59c03f3520285cef7fc7ee737b4d9b05ce297efc197a5d30b7"
+    },
+    {
+      "name": "word/media/image2.png",
+      "bytes": 560255,
+      "sha256": "596f5f9d515ec7748b92a8992b6eda6dcb9768ea71076fbbd9dd98c2c7898d0b"
+    }
+  ],
+  "auxiliary_parts": [
+    {
+      "part": "word/endnotes.xml",
+      "text": ""
+    },
+    {
+      "part": "word/footer1.xml",
+      "text": "第 2 页"
+    },
+    {
+      "part": "word/footnotes.xml",
+      "text": ""
+    }
+  ],
+  "embedded_objects": [],
+  "revision_counts": {
+    "ins": 0,
+    "del": 0
+  },
+  "limitations": [
+    "XML extraction does not verify pagination/layout or OCR image content; inspect media separately."
+  ]
+}
