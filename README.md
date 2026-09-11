@@ -1,36 +1,58 @@
 # ZqhjGame
 
-最新目标与命令：[先取得非零正式分数](FIRST_SCORE.md)。当前新增旋转训练、扩大搜索覆盖和视觉上报门限验证；正式成绩以该页记录为准。
+红枫 2026 赛题二的多无人机视觉协同代码。**当前已验证基线为 score-v22：正式场景 seed101、600 秒回合取得 9.06 分，2 次坐标报告，0/3 目标清除，0 惩罚，定位 RMSE 11.27 米。** 这是一次非零成绩，尚未实现双机持续捕获或稳定高分。
 
-当前得分优化实验、评分条件及新训练/推理命令：[SCORE_OPTIMIZATION.md](SCORE_OPTIMIZATION.md)。score-v12加入异步视觉、背景负样本训练和协同搜索；尚无高分验收。下方保留既有学习路线记录。
+当前实际方法：轮廓候选 → 64×64 局部 CNN 真假/背景分类 → 图像运动关联与局部地面定位 → 条带搜索、广播协同和解析轨迹规划 → 严格短轨迹坐标上报。参考了 Gou 围捕策略引导和 YOPO 运动基元/代价思想，但 **v22 没有使用 YOPO 学习评分头，也不是图像到轨迹的端到端网络**。
 
-最新完整视觉/控制包及命令：[VISION_TRAINING_AND_INFERENCE.md](VISION_TRAINING_AND_INFERENCE.md)。已完成双类视觉训练、三机自身RGB推理、实验性地理估计、导航适配和单模块+权重包。最新实测仍0分、0/3；真实K=2和跨场景精度未通过。证据见[本轮验收](docs/VISUAL_CLOSED_LOOP.md)。
+## 队友从这里开始
 
-**训练与推理主入口：[TRAINING_AND_INFERENCE.md](TRAINING_AND_INFERENCE.md)**。v0.3已接通真实公开观测采集、51维比赛边界/机体系适配、引导学习、续训、单文件权重导出与标准库在线推理。正式视觉识别/定位和真实K=2验收仍未完成。
-
-红枫2026赛题二自研代码。当前是参考Gou围捕引导策略和YOPO轨迹评价思想实现的解析控制基线，入口已能返回飞行、云台和广播命令。
-
-`learning/guidance.py`实现轨迹成本反传和分数头训练；独立学习环境中的模型可经`learn.cmd export`导出，`run.cmd --submission`加载。主命令文档包含本轮已验证的权重路径。早期机制验证见[引导学习历史说明](docs/GUIDANCE_LEARNING.md)。
-
-| 模块 | 职责 |
+| 文档 | 用途 |
 | --- | --- |
-| `src/zqhj_entry.py` | 官方Agent入口和在线串联 |
-| `src/zqhj_state.py` | 合法仿真时间、检测归一化、含噪短轨迹 |
-| `src/zqhj_comm.py` | 41字节广播、2Hz限频、去重和TTL |
-| `src/zqhj_cooperation.py` | 双机候选接应、第三机搜索、上报证据门限 |
-| `src/zqhj_planner.py` | APF引导、固定翼候选轨迹、约束检查 |
-| `src/zqhj_localization.py` | 已有严格条件的图像地面投影组件 |
-| `src/zqhj_vision.py` | 内存 RGB 解码、单类车辆候选和限幅图像反馈 |
-| `src/zqhj_photo_entry.py` | 三机私有视觉状态、重复帧/异常处理、屏蔽SDK后备检测 |
+| [交接总览](docs/HANDOFF.md) | 当前代码结构、方法、结果、开发与验收流程 |
+| [安装、运行与训练](docs/QUICKSTART.md) | 从本仓库根目录执行的 PowerShell 命令 |
+| [资产交接清单](docs/ARTIFACT_HANDOFF.md) | 克隆后还缺什么、冻结包哈希、数据路径迁移 |
+| [已知问题与下一步](docs/KNOWN_ISSUES.md) | 捕获失败、识别/定位风险、工具限制与优先级 |
+| [首个非零成绩记录](FIRST_SCORE.md) | v22 实测依据、历史对比与原始产物路径 |
+| [版本历史](STATUS.md) | 按版本保留的开发与验证记录；旧章节不代表当前状态 |
 
-从官方环境根目录运行：
+## 仓库与运行环境
 
-```powershell
-.\ZqhjGame\run.cmd test
-.\ZqhjGame\run.cmd dry-run --agent zqhj_entry:EntryAgent --redis-port 6395
-.\ZqhjGame\run.cmd agent --agent zqhj_entry:EntryAgent --duration 8 --redis-port 6395
+**Git 仓库根目录就是 `ZqhjGame/`，不是官方发行包根目录。** 将仓库放在官方 Windows UE 发行包内：
+
+```text
+hf2026-sim-windows/              # 官方发行包，单独准备
+├─ competition/                 # 官方 SDK / 场景 / 裁判
+├─ python/                      # 官方解释器
+├─ ue-renderer/                 # UE 图像环境
+├─ opensim-sim.exe
+└─ ZqhjGame/                    # 本仓库，git 命令在这里执行
+   ├─ src/                     # 在线算法
+   ├─ learning/                # 引导学习与视觉回归
+   ├─ tests/                   # 基础控制回归
+   ├─ tools/                   # 离线运行、训练、导出与分析
+   ├─ docs/                    # 技术文档与交接说明
+   ├─ .venv-learning/          # 本机重建，不提交
+   └─ artifacts/               # 权重、冻结包、数据、日志，不提交
 ```
 
-解析在线入口不需要新增Python依赖。可选学习模块使用独立PyTorch环境，见`requirements-learning.txt`。在线入口不读文件/Redis/路线/裁判真值。工程层的实验产物保存在`artifacts/`。
+`.gitignore` 忽略整个 `artifacts/`。**仅执行 `git clone` 不会获得已得分权重、提交包或训练数据**，也不会获得官方 SDK / UE。先按[资产交接清单](docs/ARTIFACT_HANDOFF.md)同步所需文件，再执行[快速开始](docs/QUICKSTART.md)。
 
-解析实现依据、算法边界、协议和运行说明见[论文与代码对应](docs/PAPER_GUIDED_IMPLEMENTATION.md)，验收结果见[STATUS](STATUS.md)。目前已用真实引擎公开观测训练并运行神经控制，未完成在线视觉识别或真实K=2验收，未核实的候选不会直接上报。
+环境与冻结包齐备后，从本仓库根目录执行一次完整回合：
+
+```powershell
+$runDir = "artifacts/vision/runs/v22-$(Get-Date -Format yyyyMMdd-HHmmss)-seed104"
+.\vision.cmd run --ue-direct --duration 600 --seed 104 `
+  --submission artifacts/submission/score-v22/agent.py `
+  --enable-reports --max-photos 500 --output $runDir
+```
+
+seed104 是复测示例，不是已验证成绩。必须等回合结束，读取 `$runDir/official/*.evaluation.json`；中途显示分数、进程退出、检测 mAP 和 `OBSERVE` 状态都不能替代最终比赛结果。不要同时运行两场 UE / Redis 回合。
+
+## 开发原则
+
+- 保留 `artifacts/submission/score-v22/` 原样；修改源码后导出到新的版本目录并重新评估。
+- 在线仅使用本机公开照片/位姿/briefing、合法广播和实例状态。官方文件只读，裁判诊断仅在回合结束后进行。
+- 每次结果记录代码及权重哈希、seed、仿真结束时间、总分、报告数、清除数、惩罚和 RMSE。
+- 当前优先补齐双机对同一真目标持续 20 秒的实际捕获，具体任务见[已知问题](docs/KNOWN_ISSUES.md)。
+
+历史学习分支见 [TRAINING_AND_INFERENCE.md](TRAINING_AND_INFERENCE.md)，历史 YOLO 视觉路线见 [VISION_TRAINING_AND_INFERENCE.md](VISION_TRAINING_AND_INFERENCE.md)。它们保留了不同版本的模型和门限；运行 v22 请以本页、交接文档和 [FIRST_SCORE.md](FIRST_SCORE.md) 为准。

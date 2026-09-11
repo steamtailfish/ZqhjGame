@@ -1,5 +1,7 @@
 # 训练、推理与首个正式分数
 
+新队友请先看 [交接总览](docs/HANDOFF.md) 与 [QUICKSTART.md](docs/QUICKSTART.md)。本页原命令从官方发行包根目录执行；QUICKSTART 已统一为从 Git 仓库 `ZqhjGame/` 根目录执行，并补充资产同步、训练数据绝对路径迁移及显式导出依赖。`artifacts/` 不随 Git 克隆，详见 [资产清单](docs/ARTIFACT_HANDOFF.md)。
+
 当前验收：先取得非零正式分数，再优化高分。只以未修改正式场景的原始 evaluation JSON 为准。
 
 ## 当前版本与结果
