@@ -1,27 +1,45 @@
-# 资产交接清单
+# 当前 v22 资产清单
 
-更新日期：2026-09-11。Git 只保存代码和文档；`.gitignore` 忽略 `artifacts/`、`.venv/` 和 `.venv-learning/`。下面是开发机已有资产的路径清单，**不是 GitHub 已提供的下载链接**。当前没有自动下载入口，需要项目持有人向队友另行同步所需文件。
+更新日期：2026-09-11。当前资产已纳入 Git LFS，包括冻结提交包、训练数据及依赖图片、正式实测记录与技术 Word。无需队友另行索取这些文件。官方 SDK/UE 发行包、本机虚拟环境和已清理的历史实验不上传。
 
-除官方发行包外，下列路径均相对 `ZqhjGame/`。只同步必要的资产，不要直接把整个 `artifacts/` 强制加入 Git：其中还有大量历史实验、受控数据和外部诊断记录。
+## 下载与检查
 
-## 按用途准备
+先安装 Git LFS，在官方发行包目录下首次克隆：
 
-| 用途 | 必需资产 | 备注 |
-| --- | --- | --- |
-| 运行冻结 v22 | 完整官方 Windows UE 发行包；`artifacts/submission/score-v22/` 整个目录 | 无需训练数据或旧 YOPO 控制权重；官方环境在本仓库父目录 |
-| 传输冻结包 | `artifacts/submission/first-score-v22.zip` | 已有压缩副本，解压后确保 `agent.py`、`vision.pt` 等直接位于 `artifacts/submission/score-v22/`，不要多嵌套一层 |
-| 修改源码再导出 | 冻结包中的 `agent.py`、`vision.pt` | QUICKSTART 显式用冻结 `agent.py` 作为 `--controller` 来源；不依赖导出器默认的历史路径 |
-| 隔离模型检查 | `artifacts/vision/fixtures/true-v2/observations/20002/62c13d88321f8e68637990aca8d0ec440b10194091b18397110322f876452299.image` | `check_visual_package.py` 固定读取的受控照片；内容 SHA256 即文件名，不包含在提交 zip 内 |
-| 重新训练 | `artifacts/vision/datasets/appearance-data-v3/accepted.jsonl` 及每行 `image` 引用的全部图片 | 单独复制 JSONL 不够；需迁移绝对路径，见下节 |
-| 核查训练依据 | `artifacts/vision/models/appearance-v3/training.json`、审核记录及原始受控照片 | `appearance.pt` 与冻结 `vision.pt` 哈希相同；源照片路径保留审核来源 |
-| 原始实验分析 | `artifacts/vision/runs/score600-v22-seed101/` 整个目录 | 包含官方结果、公开图像、控制记录；仅复制 evaluation 不能运行完整分析工具 |
-| 已有诊断结论 | `artifacts/checks/score-v22-101-analysis.json`、`score-v22-isolated.json`、`score-v22-release-integrity.json` | 已有检查记录，与正式评分作用不同 |
-| 技术 Word | `artifacts/reports/v22-technical/ZqhjGame_v22_技术报告.docx` | 8 页报告，亦被 artifacts 规则忽略；本次 Git 交接不包含该二进制文档 |
-| 历史引导学习研究 | `artifacts/submission/competition-guidance-v3.py` 及对应训练数据/模型 | 仅研究旧分支时需要，不是运行冻结 v22 的前提 |
+```powershell
+git lfs install
+git clone https://github.com/steamtailfish/ZqhjGame.git ZqhjGame
+Set-Location ZqhjGame
+git lfs pull
+```
 
-## 冻结包核验
+已经克隆的队友在仓库根目录执行 `git pull --ff-only`、`git lfs install --local`、`git lfs pull`。若权重或照片文件只有几行且以 `version https://git-lfs.github.com/spec/v1` 开头，那只是指针，需要完成 LFS 下载。
 
-冻结目录有 9 个文件：`agent.py`、`vision.pt`、`requirements.txt`、`technical_report.md`、`manifest.json`、`README.md`、`FIRST_SCORE.md`、`SCORE_OPTIMIZATION.md`、`baseline_evaluation.json`。保持目录原样。当前 Git 提交号标记源码版本，以下哈希标记真正运行过的独立提交资产。
+当前文件列表和 SHA256 记录在 [V22_ASSETS.json](V22_ASSETS.json)，在准备好 Python 后校验：
+
+```powershell
+.\.venv-learning\Scripts\python.exe -B -X utf8 tools/check_v22_assets.py
+```
+
+该检查不启动比赛，不加载模型；验证每个已发布资产的内容、体积和哈希。下载失败时检查 Git LFS 输出，不修改 manifest 绕过错误。
+
+## 保留范围
+
+| 用途 | 当前路径 |
+| --- | --- |
+| 冻结提交包 | `artifacts/submission/score-v22/` 全部 9 个文件；压缩副本 `artifacts/submission/first-score-v22.zip` |
+| 当前权重与训练记录 | `artifacts/vision/models/appearance-v3/appearance.pt`、`training.json` |
+| 审核训练数据 | `artifacts/vision/datasets/appearance-data-v3/accepted.jsonl`，以及所有 image / source_photo 依赖图片 |
+| 完整正式回合 | `artifacts/vision/runs/score600-v22-seed101/`，含公开观测、照片、动作和官方结果 |
+| 当前验证与诊断 | `artifacts/checks/` 中保留的 v22 隔离、分析、回放和一致性记录 |
+| 当前技术报告 | `artifacts/reports/v22-technical/ZqhjGame_v22_技术报告.docx`，Markdown 版见 [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) |
+| 参考资料 | `artifacts/papers/` 中论文阅读笔记和图示 |
+
+部分当前训练图片位于带 v1/v2 名称的目录，这是 appearance-v3 的依赖，不是保留旧算法版本。不要再次按目录名删除。固定隔离照片也已保留：`artifacts/vision/fixtures/true-v2/observations/20002/62c13d88321f8e68637990aca8d0ec440b10194091b18397110322f876452299.image`。
+
+当前只保留 score-v22 和 appearance-v3；历史提交包、模型、回合及中间输出已移出 artifacts。本机 `.local-archive/pre-v22-20260911/` 是可恢复隔离区，已被 Git 忽略，不会上传。既有 Git 提交历史不重写。
+
+## 冻结包关键哈希
 
 | 文件 | SHA256 |
 | --- | --- |
@@ -29,20 +47,7 @@
 | `vision.pt` | `819381fa5b383310592238f0cc61843c5ac808228bc4ec9d997295c9c822a0cf` |
 | `baseline_evaluation.json` | `c86139edcc5623cd04b1246d36eb4c1bddce6e3d19cb93673020355a92df0159` |
 
-在仓库根目录执行以下 PowerShell。结果不匹配就重新核对传输来源，不修改包的哈希或覆盖模型以绕过错误。
-
-```powershell
-$expected = @{
-  'agent.py' = '202cbadb96e2cb6b39903bc49de94f2af3aaa946a111fcbad1a38860af2e7cf7'
-  'vision.pt' = '819381fa5b383310592238f0cc61843c5ac808228bc4ec9d997295c9c822a0cf'
-  'baseline_evaluation.json' = 'c86139edcc5623cd04b1246d36eb4c1bddce6e3d19cb93673020355a92df0159'
-}
-foreach ($name in $expected.Keys) {
-  $actual = (Get-FileHash -LiteralPath "artifacts/submission/score-v22/$name" -Algorithm SHA256).Hash
-  if ($actual -ne $expected[$name]) { throw "资产哈希不匹配：$name" }
-  Write-Output "OK $name"
-}
-```
+冻结包保持原样，附带文档是当时快照；当前使用步骤以 QUICKSTART 为准，代码、权重和原始结果字节不变。
 
 ## 训练数据路径迁移
 
@@ -87,8 +92,9 @@ print(f'已核验 {len(rows)} 条记录并写入 {target}')
 
 `accepted-local.jsonl` 的文件哈希因路径变化而不同，应记录其来源为原始审核文件的迁移副本。图片内容哈希不应变化。若验证失败，先补齐图片或核对路径，不去掉哈希校验继续训练。
 
-## 历史记录的迁移边界
 
-部分实验 JSON 也保存原机绝对路径。可直接查看复制来的官方 evaluation，但完整分析工具可能无法按旧路径读取提交模块，或退回默认分析门限；不能把迁移后的诊断字段当作同配置结果。建议保留原始记录不改，必要时另建有来源说明的分析副本；新回合自然会记录新机器路径。
+## 记录路径与权限
 
-官方引擎、SDK 和 UE 从队伍获准使用的官方发行包取得。外部裁判诊断记录只用于赛后解释，不允许进入 Agent 在线输入或身份训练标签。
+正式运行 JSON 保留原机绝对路径作为原始证据，不改写冻结记录。官方 evaluation 可直接查看；分析工具若无法找到旧提交路径，可能使用默认分析门限，因此新机器分析时要注明路径迁移影响。新的回合会记录新路径。
+
+外部裁判诊断只用于赛后解释，不允许进入 Agent 在线输入或身份训练标签。审核记录迁移副本 `accepted-local.jsonl` 由各机器生成并被 Git 忽略。

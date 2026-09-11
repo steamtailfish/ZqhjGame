@@ -2,4 +2,6 @@
 .venv-learning/
 __pycache__/
 *.py[cod]
-artifacts/
+.local-archive/
+**/accepted-local.jsonl
+artifacts/checks/v22-cleanup-plan.json

@@ -9,11 +9,13 @@
 在官方发行包目录下首次克隆（已有仓库就跳过）：
 
 ```powershell
+git lfs install
 git clone https://github.com/steamtailfish/ZqhjGame.git ZqhjGame
 Set-Location ZqhjGame
+git lfs pull
 ```
 
-按[资产交接清单](ARTIFACT_HANDOFF.md)同步 `artifacts/submission/score-v22/`。运行现有包不需要训练集，也不需要 `vision.cmd init` 下载/复制旧 YOLO 权重。
+按[资产清单](ARTIFACT_HANDOFF.md)下载 Git LFS 文件，当前包、训练数据和测试照片均已包含。运行现有包不需要训练集，也不需要 `vision.cmd init` 下载/复制旧 YOLO 权重。
 
 新机器使用 Python 3.13 重建项目虚拟环境；开发机验证版本为 3.13.9，CPU Torch 2.7.1。不要拷贝开发机 `.venv-learning`。`py` 需要 Windows Python Launcher；未配置时用本机已安装的 Python 3.13 可执行文件替换第一条命令。
 
@@ -46,7 +48,7 @@ Get-FileHash artifacts/submission/score-v22/baseline_evaluation.json -Algorithm 
 
 `run.cmd` 优先使用 `ZQHJ_PYTHON`，其次本项目 `.venv`，最后发行包 `../python/python.exe`；`vision.cmd` 固定使用 `.venv-learning/Scripts/python.exe`。检查通过只证明对应软件链路，不证明比赛得分。
 
-以下隔离检查还依赖资产清单中的固定真车测试照片，只有冻结包时先跳过这一条，不能把“跳过”记成“通过”：
+以下隔离检查依赖的固定真车测试照片已随 Git LFS 提供；缺文件时先执行 `git lfs pull`：
 
 ```powershell
 $checkPath = "artifacts/checks/v22-isolated-$(Get-Date -Format yyyyMMdd-HHmmss).json"
@@ -88,7 +90,7 @@ Get-ChildItem -LiteralPath "$runDir/official" -Filter '*.evaluation.json' |
 
 ## 4. 修改源码后重新导出
 
-以下保留 appearance-v3 权重，导出当前源码到新包。显式指定冻结 `agent.py` 作为 `--controller` 的函数来源，避免导出器默认寻找未同步的历史 `competition-guidance-v3.py`。导出器会提取其中 `_policy_weights`；`--distributed-search` 仍选择解析规划，未启用这些学习权重。
+以下保留 appearance-v3 权重，导出当前源码到新包。显式指定冻结 `agent.py` 作为 `--controller` 的函数来源，明确导出依赖（默认值也已改为当前冻结包）。导出器会提取其中 `_policy_weights`；`--distributed-search` 仍选择解析规划，未启用这些学习权重。
 
 ```powershell
 $exportDir = "artifacts/submission/dev-$(Get-Date -Format yyyyMMdd-HHmmss)"
@@ -103,7 +105,7 @@ $exportDir = "artifacts/submission/dev-$(Get-Date -Format yyyyMMdd-HHmmss)"
 
 ## 5. 重新训练局部外观模型
 
-先同步人工审核记录及其所有图片，按[资产清单的数据迁移步骤](ARTIFACT_HANDOFF.md#训练数据路径迁移)生成本机 `accepted-local.jsonl`。只有冻结包时不能重训。不要使用未审核 v5 候选或裁判真值作为身份标签。
+完成 Git LFS 下载后，按[资产清单的数据迁移步骤](ARTIFACT_HANDOFF.md#训练数据路径迁移)生成本机 `accepted-local.jsonl`。不要使用未经人工审核的候选或裁判真值作为身份标签。
 
 ```powershell
 $modelDir = "artifacts/vision/models/appearance-$(Get-Date -Format yyyyMMdd-HHmmss)"
@@ -120,4 +122,4 @@ $exportDir = "artifacts/submission/retrained-$(Get-Date -Format yyyyMMdd-HHmmss)
   --reports-default-on --output $exportDir
 ```
 
-此命令不启动比赛。默认不启用 appearance-v4 的 `--appearance-jitter` 实验，其他训练参数见脚本和 `training.json`。重训权重不继承 9.06 分，须独立检查和正式评测。历史 YOPO 控制训练使用 `learn.cmd`，不属于这条 v22 外观训练流程。
+此命令不启动比赛。默认不启用额外的 `--appearance-jitter` 实验，其他训练参数见脚本和 `training.json`。重训权重不继承 9.06 分，须独立检查和正式评测。YOPO 研究源码不属于这条 v22 外观训练流程，旧研究权重已移出当前资产。

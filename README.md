@@ -10,10 +10,10 @@
 | --- | --- |
 | [交接总览](docs/HANDOFF.md) | 当前代码结构、方法、结果、开发与验收流程 |
 | [安装、运行与训练](docs/QUICKSTART.md) | 从本仓库根目录执行的 PowerShell 命令 |
-| [资产交接清单](docs/ARTIFACT_HANDOFF.md) | 克隆后还缺什么、冻结包哈希、数据路径迁移 |
+| [资产交接清单](docs/ARTIFACT_HANDOFF.md) | Git LFS 下载、冻结包哈希、数据路径迁移 |
 | [已知问题与下一步](docs/KNOWN_ISSUES.md) | 捕获失败、识别/定位风险、工具限制与优先级 |
 | [首个非零成绩记录](FIRST_SCORE.md) | v22 实测依据、历史对比与原始产物路径 |
-| [版本历史](STATUS.md) | 按版本保留的开发与验证记录；旧章节不代表当前状态 |
+| [当前状态](STATUS.md) | 仅记录当前 v22 的完成情况与剩余工作 |
 
 ## 仓库与运行环境
 
@@ -32,10 +32,10 @@ hf2026-sim-windows/              # 官方发行包，单独准备
    ├─ tools/                   # 离线运行、训练、导出与分析
    ├─ docs/                    # 技术文档与交接说明
    ├─ .venv-learning/          # 本机重建，不提交
-   └─ artifacts/               # 权重、冻结包、数据、日志，不提交
+   └─ artifacts/               # 当前权重、冻结包、数据、日志，Git LFS
 ```
 
-`.gitignore` 忽略整个 `artifacts/`。**仅执行 `git clone` 不会获得已得分权重、提交包或训练数据**，也不会获得官方 SDK / UE。先按[资产交接清单](docs/ARTIFACT_HANDOFF.md)同步所需文件，再执行[快速开始](docs/QUICKSTART.md)。
+**当前 v22 的全部必要资产已通过 Git LFS 纳入仓库。** 安装 Git LFS 后克隆，执行 `git lfs pull`，再按[资产清单](docs/ARTIFACT_HANDOFF.md)校验。官方 SDK/UE 与本机虚拟环境需单独准备；旧实验资产已移出当前目录，不上传。
 
 环境与冻结包齐备后，从本仓库根目录执行一次完整回合：
 
@@ -55,4 +55,4 @@ seed104 是复测示例，不是已验证成绩。必须等回合结束，读取
 - 每次结果记录代码及权重哈希、seed、仿真结束时间、总分、报告数、清除数、惩罚和 RMSE。
 - 当前优先补齐双机对同一真目标持续 20 秒的实际捕获，具体任务见[已知问题](docs/KNOWN_ISSUES.md)。
 
-历史学习分支见 [TRAINING_AND_INFERENCE.md](TRAINING_AND_INFERENCE.md)，历史 YOLO 视觉路线见 [VISION_TRAINING_AND_INFERENCE.md](VISION_TRAINING_AND_INFERENCE.md)。它们保留了不同版本的模型和门限；运行 v22 请以本页、交接文档和 [FIRST_SCORE.md](FIRST_SCORE.md) 为准。
+当前训练与推理命令统一见 [QUICKSTART.md](docs/QUICKSTART.md)。仓库当前分支只保留 v22 的状态与资产，学习研究源码保留但未参与当前得分。

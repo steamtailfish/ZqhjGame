@@ -14,7 +14,7 @@ from vision_support import output_dir,write,sha
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--controller',type=Path,default=PROJECT/'artifacts/submission/competition-guidance-v3.py')
+    p.add_argument('--controller',type=Path,default=PROJECT/'artifacts/submission/score-v22/agent.py')
     p.add_argument('--weights',type=Path,default=PROJECT/'artifacts/vision/weights/base_vehicle.pt')
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--geometry',choices=['off','estimated'],default='off')
