@@ -1,105 +1,98 @@
-# 三机搜索与双机接应：capture-v25
+# 三机搜索与双机接应：capture-v26
 
-2026-09-12。当前候选 capture-v25 实现“三机先搜索，可靠发现后两机跟踪，剩余一机继续搜索”。score-v22 的 9.06 分基线保持冻结。当前权重沿用 appearance-v3，没有重新训练，也没有启用 YOPO 学习评分头。
+更新于 2026-09-12。当前运行包为 `artifacts/submission/capture-v26/`，参考 Gou 围捕策略引导与 YOPO 运动基元思想，采用局部 CNN 视觉分类、运动几何定位、合法广播和解析固定翼规划。本轮没有重训，也没有启用 YOPO 学习评分头，不是图像到轨迹的端到端网络。
 
-**当前实测：300 秒请求 / 299.9667 秒记录，seed101，9.27 分、2 次坐标报告、RMSE 8.7472 米、0 惩罚、0/3 清除。已发起两次接应任务，但没有形成有效双机跟踪，官方 `passed=false`。** 该成绩来自坐标精度，尚未完成 600 秒复测或多 seed 验证。
+## 正式结果
 
-## 行为与规则
+**seed101，600 秒请求 / 599.9667 秒记录：18.67 分、4 次坐标报告、RMSE 9.6671 米、0 惩罚、0/3 清除，`passed=false`。** 相比已保留的 v22 完整回合 9.06 分，本轮分数更高；这是一次单 seed 结果，不能证明稳定提升或泛化。
 
-三架无人机按公开区域分工搜索。目标总数为 3 并不意味着每架飞机能预先知道一辆真实目标的位置；任务由公开照片产生，诱饵仍需排除。
-
-| 状态 | 实际行为与退出条件 |
+| 验证项 | v26 实际结果 |
 | --- | --- |
-| SEARCH | 独立搜索；已有双机任务时第三架继续搜索 |
-| VERIFY | 沿原搜索航迹积累视觉确认，最多 8 秒；未确认候选不改变飞行目标，也不召唤队友 |
-| OFFER | 有运动验证、连续身份和一致地理定位后，发现机选择预计到达最快的空闲队友 |
-| APPROACH | 队友确认任务后赶赴接应；发现机继续观察，接应机指向广播位置并独立寻找目标 |
-| TRACK_PAIR | 两机各有新鲜、独立的图像证据，并匹配同一任务位置，才累计本地联合观察时间 |
-| RECOVER | 短暂失去视觉后恢复；中断超过 2 秒重置本地累计时间 |
-| RELEASE | 本地累计 25 秒或恢复/接应超时后释放，广播 2 秒，再回到搜索 |
+| 分数来源 | 精度维度 62.23 × 0.30 = 18.67；捕获与时间维度均为 0 |
+| 官方共同跟踪 | 目标 10001 / 10002 / 10003 的 `coop_ticks` 为 35 / 124 / 0 |
+| 连续捕获 | 前两个目标各有一次计时重置，最终均未清除 |
+| 召集 | 三次任务均完成接应确认，随后因有效视觉恢复超时释放 |
+| 本机视觉证据 | 三机最长连续正样本跨度为 1.05 / 3.68 / 2.68 秒，本地联合计时仍为 0 |
+| 推理可靠性 | 三机各 1132 次推理，推理异常与异步丢弃均为 0 |
 
-正式规则要求两机对同一真实目标连续有效跟踪 20 秒，短中断容忍 2 秒。本地 25 秒包含控制余量，但**不能证明裁判捕获成功**：引擎还会判断有效检测和真实目标归属。日志始终标记 `judge_confirmed=false`。本地完成后的区域冷却也不等于已清除目标。
+这里的官方目标编号仅用于解释赛后评分；在线任务编号始终是发现机 UID 与本机序号。`coop_ticks` 是裁判采样数量，不能直接换算为秒或宣称达到捕获。与 v22/v25 的共同跟踪采样为 0 相比，本轮已出现实际双机有效跟踪，但仍未维持 20 秒。
 
-## 身份与通信
+原始评分：[evaluation](../artifacts/vision/runs/capture-v26-seed101/official/coop_decoy_1789219639.evaluation.json)。运行包中的 `evaluation.json` 是原样副本。[任务分析](../artifacts/checks/capture-v26-101-capture-analysis.json)、[视觉与上报分析](../artifacts/checks/capture-v26-101-analysis.json)、[关键照片](../artifacts/checks/capture-v26-review-01.jpg)、[照片与航迹回放](../artifacts/checks/capture-v26-replay.html)均由已结束的回合生成。
 
-- 召集需要连续至少 3 帧满足真车概率 ≥0.95、类别分差 ≥0.9，并通过运动验证与至少两次一致地理估计，定位预算 ≤110 米。持续观察的当前帧门限为概率 ≥0.9、分差 ≥0.8。相机接收年龄 ≤0.8 秒；尚未获得可信的实际拍摄时间戳。
-- 接应机通过自身照片确认，绑定本机像素轨迹和任务编号；初次绑定距离门限 80 米，维持门限 160 米。仍可能因定位误差或相邻车辆发生错误关联。
-- 任务编号由“发现机 UID + 本机递增序号”组成，不使用裁判隐藏目标 ID。广播包含发现机/接应机槽位、阶段、视觉有效标记、目标位置和速度。
-- 新通信包为 49 个 ASCII 字节、每秒最多 2 次，符合 50 字节/4 Hz 限制；兼容原通信包的解析。
-- 接应等待依据距离和航向估算，限制在 45–160 秒；8 秒未确认可改选另一架空闲机。单次任务最多 200 秒，所有有效视觉丢失 8 秒释放。
+赛后独立约 5 Hz 裁判输入采样进一步定位到两段共同观察：263.97–273.00 秒（20001/20003，样本跨度约 9.03 秒）及 415.15–417.62 秒（20001/20002，约 2.47 秒）。这些跨度不是官方精确累计时间，见[共同观察窗口](../artifacts/checks/capture-v26-101-joint-windows.json)及[归一化裁判诊断](../artifacts/checks/capture-v26-101-judge-analysis.json)。第一段已不足规则所需 20 秒。
 
-## 飞行与识别的限制
+## 本轮改了什么
 
-近目标时巡航参考速度设为 18 米/秒，期望盘旋半径约 320/360 米；接应途中参考速度为 32 米/秒，搜索为 35 米/秒。实际速度由固定翼运动基元与障碍约束共同选择，并非始终等于参考值。相机按位置引导接近，再交给像素伺服。
+v25 的发现机转入盘旋时可按约 30°/秒转向，而代码将云台 pan 每次调整限制为 6°，约 12°/秒。公开照片显示车辆移向边缘后丢失，接应机也在缓慢转动相机期间浪费了观察时间。
 
-v25 在运动已验证但连续定位尚未确认时，最多保持当前云台角度 1.5 秒，让定位模块取得稳定的相邻照片；连续定位通过或时间到达即结束保持，同一像素轨迹不会反复续期。该窗口不改变飞行路线，也不降低识别或报告门限。
+v26 在已经确认的双机任务中，使用新鲜图像定位或合法通信更新的目标位置、地面高度，以及当前自机位置和航向，直接计算世界视线并转换为相对云台角度。这同时补偿机身转弯和位移，使接应机迅速指向广播位置。重复照片不会重复积分像素误差。`point_gimbal` 接受朝向；SDK 内部 `auto_track` 的角速度配置不是本命令的逐步限制。
 
-第三架保持搜索，但此实现同一时刻只保留一个共享双机任务；尚未实现第三架的多目标候选队列。ETA 不含完整绕障路线。地面估计、图像真假识别、两机关联和云台覆盖仍是实测风险。用于短暂 VERIFY 的近似地面高度不作为坐标上报依据；原严格报告门限保持不变。
+本轮在线源码只改变 `zqhj_capture.py` 的相机指向分支，模型权重与其他模块相同，见[修改范围校验](../artifacts/checks/capture-v26-change-scope.json)。SEARCH/VERIFY、识别和报告门限保持不变。快速瞄准不构成本机视觉确认，不会直接产生坐标报告。
 
-## 导出、测试与运行
+v25 原有的定位稳定窗口继续保留：运动已确认而连续定位尚未确认时，最多保持云台 1.5 秒；定位通过或时间到即结束，同一像素轨迹不会反复续期。
 
-以下命令从 `ZqhjGame` 仓库根目录执行；先完成 [QUICKSTART.md](QUICKSTART.md) 中的环境准备。导出到未存在的新目录，不能覆盖正在运行或已记录成绩的包。
+## 搜索与协同流程
+
+| 状态 | 行为 |
+| --- | --- |
+| SEARCH | 三架飞机按公开区域分工搜索；已有双机任务时第三架继续搜索 |
+| VERIFY | 沿原搜索航迹积累身份、运动和定位证据，最多 8 秒；尚未确认时不召唤队友 |
+| OFFER | 可靠发现机选择预计到达最快的空闲队友，广播任务 |
+| APPROACH | 接应机确认后前往目标；相机指向公开估计位置，独立寻找车辆 |
+| TRACK_PAIR | 两机各有新鲜本机照片，并与同一任务匹配，才累计本地联合时间 |
+| RECOVER | 失去视觉后恢复；中断超过 2 秒重置本地联合计时 |
+| RELEASE | 恢复/接应超时或本地联合观察达到 25 秒后释放，再回到搜索 |
+
+本机实际加载的裁判 `competition/sdk/_vendored/coop_eval.py` 按捕获 50%、逐目标坐标精度 30%、全部任务完成时间 20% 加权。两机对同一真实目标连续有效跟踪 20 秒才清除，短中断容忍 2 秒。未上报的目标精度为 0，已报告目标按自己的 RMSE 与 120 米归零距离计算，再对三个目标平均。重复报告同一辆车不能替代另外两辆车的搜索覆盖。
+
+三次任务分别为 20003→20001（230.40–243.13 秒）、20001→20003（263.22–272.73 秒）、20002→20001（412.25–428.70 秒）。第三次由继续搜索的飞机新发起。本地计时与裁判判定采用不同证据，前者始终标记 `judge_confirmed=false`。
+
+## 身份、通信和飞行约束
+
+- 召集需连续至少 3 帧真车概率 ≥0.95、类别分差 ≥0.9，通过运动验证及至少两次一致地理估计，定位预算 ≤110 米。维持观察的当前帧门限为概率 ≥0.9、分差 ≥0.8。
+- 接应机必须用自己的照片验证。初次绑定距离门限 80 米，维持门限 160 米；绑定同时检查本机像素轨迹和任务编号。照片接收年龄 ≤0.8 秒，不等于已验证的拍摄时间。
+- 广播为 49 个 ASCII 字节、每秒最多 2 次，包含发现机/接应机、阶段、目标位置、速度、地面高度和观测年龄，符合 50 字节/4 Hz 限制。
+- 接应预算为 45–160 秒；8 秒未确认可改选队友；所有有效视觉丢失 8 秒释放；单次任务最多 200 秒。
+- 搜索参考速度 35 米/秒，远距离接应 32 米/秒，近目标 18 米/秒；期望盘旋半径 320/360 米。实际动作经固定翼规划器与安全约束筛选，保持原 200 米机间距离底线。
+- 在线只使用本机公开 RGB/位姿/briefing、合法广播和实例状态。官方 SDK、场景和裁判不修改，外部裁判记录只用于赛后诊断，不能反馈在线或作为身份训练标签。
+
+## 仍然限制得分的问题
+
+相机修正后已经出现官方共同跟踪，但本地可靠视觉仍短于接应所需时长。三次最终视觉中断都紧接任务附近候选被分类为诱饵：20003 在 235.23 秒、20001 在 264.85 秒、20002 在 420.73 秒，投影位置距公开任务估计仅约 5.6、8.7、3.8 米。最后一次车辆仍接近画面中心，说明相机补偿已经执行；分类翻转会立即清空候选并重置像素轨迹和运动证据。这些是公开记录关联，分类概率不是真实身份标签。下一轮考虑已确认轨迹的短时身份迟滞和空间/运动重获，仍需正式回合验证；不能直接取消诱饵过滤或无限延长旧坐标租期。
+
+近正下视时，保持同一地面点仍可能让画面朝向快速旋转。20002 在 412.25–412.77 秒发生大幅 pan 换向，随后光流匹配不足，413.85 秒像素轨迹重置；416.52 秒曾恢复绑定。世界视线稳定并不保证图像关联稳定，这也是下一轮需要处理的环节。
+
+远距离尺度也有限制：v25 已保存照片的透视估算显示，1174 米距离、50°视场下车辆长边约 4 像素，低于当前轮廓候选尺寸门限。接应机需要继续飞近；当前接应引导在 650 米以内过早进入盘旋切线，是下一项待验证改动。此结论是离线几何估算，不代表缩小视场即可准确识别。
+
+当前同时只保留一个共享双机任务，第三架尚无多目标候选队列。缺少多 seed 结果、未见场景验证，公开照片的真实拍摄时刻及地面估计仍有误差。
+
+## 运行、训练与验证命令
+
+以下均在 `ZqhjGame` 仓库根目录的 PowerShell 执行。环境和现有外观模型训练步骤见 [QUICKSTART.md](QUICKSTART.md)。本轮是控制修改，无需重新训练。
 
 ```powershell
-.\.venv-learning\Scripts\python.exe -m unittest discover -s learning -p test_capture.py
-.\vision.cmd verify
-.\run.cmd test
+# 检查当前源码
+.\.venv-learning\Scripts\python.exe -B -X utf8 -m unittest learning.test_capture learning.test_score_search learning.test_async_vision learning.test_visual_geometry learning.test_judge_trace
 
+# 直接运行已经验证的 v26 冻结包
+$runDir = "artifacts/vision/runs/v26-$(Get-Date -Format yyyyMMdd-HHmmss)-seed101"
+.\vision.cmd run --ue-direct --duration 600 --seed 101 `
+  --submission artifacts/submission/capture-v26/agent.py `
+  --enable-reports --max-photos 400 --output $runDir
+
+# 必须等上面的回合结束
+.\.venv-learning\Scripts\python.exe -B -X utf8 tools/analyze_capture_run.py $runDir --output "$runDir/capture-analysis.json"
+.\.venv-learning\Scripts\python.exe -B -X utf8 tools/analyze_score_run.py $runDir --output "$runDir/score-analysis.json"
+.\.venv-learning\Scripts\python.exe -B -X utf8 tools/build_capture_review.py $runDir --output "$runDir/review"
+
+# 修改 src 后导出新包，不覆盖冻结包
 $package = "artifacts/submission/capture-$(Get-Date -Format yyyyMMdd-HHmmss)"
 .\vision.cmd export --weights artifacts/submission/score-v22/vision.pt `
   --patch-appearance --geometry estimated --cooperative-capture `
   --reports-default-on --output $package
-
-.\.venv-learning\Scripts\python.exe tools/check_visual_package.py "$package/agent.py" `
-  --output "$package/isolation.json"
-
-$runDir = "artifacts/vision/runs/capture-$(Get-Date -Format yyyyMMdd-HHmmss)-seed101"
-.\vision.cmd run --ue-direct --duration 600 --seed 101 `
-  --submission "$package/agent.py" --enable-reports --max-photos 400 --output $runDir
-
-# 仅在回合结束且 run.json 标记 completed 后分析
-.\.venv-learning\Scripts\python.exe tools/analyze_capture_run.py $runDir `
-  --output "$runDir/capture-analysis.json"
-.\.venv-learning\Scripts\python.exe tools/analyze_score_run.py $runDir `
-  --output "$runDir/score-analysis.json"
+.\.venv-learning\Scripts\python.exe -B -X utf8 tools/check_visual_package.py "$package/agent.py" --output "$package/isolation.json"
 ```
 
-本次实际候选为 `artifacts/submission/capture-v25/agent.py`，针对性实测目录为 `artifacts/vision/runs/capture-v25-seed101/`，时长为 300 秒。上方 600 秒命令供完整复测，不是 v25 已完成的成绩。训练命令见 [QUICKSTART.md](QUICKSTART.md)；本次修改的是任务协调与相机/导航控制，无需重新训练即可运行。
+21 项协同、10 项搜索、3 项异步、5 项几何测试和 9 项离线时间轴测试通过；[独立包隔离检查](../artifacts/checks/capture-v26-isolated.json)确认三机模型私有、在线回调无文件 I/O。离线时间轴从正式首帧日志恢复起点，保留原始时间与舍入误差，不硬编码时区偏移。软件检查不代替正式成绩。
 
-## 验证与结果
-
-初版检查通过：13 项协同测试、10 项搜索测试、3 项异步测试、5 项几何测试、17 项视觉检查及基础控制检查。修正后增加确认阶段保持搜索的回归，共 14 项协同测试通过。v24 独立包隔离检查确认三机模型私有且在线回调不读写文件，证据：`artifacts/checks/capture-v24-isolated.json`。
-
-| 正式实验 | 时长 / seed | 分数 | 报告 | 清除 | 惩罚 | 结论 |
-| --- | --- | --- | --- | --- | --- | --- |
-| score-v22 已验证基线 | 599.9167 秒 / 101 | 9.06 | 2 | 0/3 | 0 | 坐标精度分，无捕获 |
-| capture-v23 首轮 | 600.0 秒 / 101 | 0 | 0 | 0/3 | 0 | 未发起接应任务，确认阶段失败 |
-| capture-v24 搜索航迹修正 | 599.95 秒 / 101 | 0 | 0 | 0/3 | 0 | 最大连续定位计数为 1，仍未发起任务 |
-| capture-v25 云台稳定窗口 | 299.9667 秒 / 101 | 9.27 | 2 | 0/3 | 0 | 两次召集与确认成功，均在共同观察前中断 |
-
-v23 三机只有 SEARCH/VERIFY 状态，各自 65、42、53 个 VERIFY 日志样本；均无任务、无接应确认、无本地联合观察，`fast_geo_hits` 最大值均为 0。三架飞机的推理异常、异步丢弃均为 0，约 99.38% 日志记录中可见两名队友；因此首轮瓶颈位于视觉确认而非通信握手。官方三个目标 `coop_ticks=0`。
-
-赛后查看公开照片，发现多处高置信框落在树木、阴影或建筑边缘；不能因为网络自信就视作真目标。首轮尚未确认就切换盘旋的代码会改变航迹和相机姿态，有打断地面估计及偏离搜索区域的风险。v24 只修改此项：VERIFY 继续搜索飞行，可靠确认后才进入任务盘旋；是否改善由第二轮结果检验，不把这一推断当作已经证明的因果关系。
-
-首轮证据：`artifacts/checks/capture-v23-101-capture-analysis.json`、`capture-v23-101-analysis.json`、`capture-v23-101-judge-analysis.json`，以及[公开照片检查图](../artifacts/checks/capture-v23-public-review.jpg)。外部裁判记录仅用于赛后分析，不向在线策略提供输入。
-
-为保持交接目录只包含当前候选，v23、v24 失败中间包、完整回合及原始外部跟踪文件分别可恢复地归档于本机 `.local-archive/capture-development/failed-v23/`、`failed-v24/`，不加入 Git。各轮原始官方评分的逐字节副本 `artifacts/checks/capture-v23-evaluation.json`、`capture-v24-evaluation.json` 和对应 `capture-vXX-package.json` 来源清单随诊断摘要保留。
-
-v24 仍未建立任务，三机 `fast_geo_hits` 最大值为 1、0、1，且推理异常和异步丢弃均为 0。公开记录显示 20003 在约 230 秒时保持车辆身份与运动关联，但云台调整期间定位预算从 84.70 米升到 116.58 米，连续定位被清零；20001 约 405 秒则在一次有效定位后丢失候选。详细相邻帧见 `artifacts/checks/capture-v24-confirmation-windows.json`，配套[公开照片](../artifacts/checks/capture-v24-confirmation-review.jpg)。这些现象支持优先检查稳定观察窗口，但两次单 seed 回合不足以证明因果或泛化效果。
-
-v25 新增云台保持必须按时结束、定位通过立即结束的回归，协同测试共 15 项通过，包隔离检查见 `artifacts/checks/capture-v25-isolated.json`。正式回合、短回合和合成测试分开记录。
-
-## 当前接应为什么没有捕获
-
-| 发现机 → 接应机 | 发起 / 确认时刻 | 接应机距图像估计目标 | 释放时刻与原因 |
-| --- | --- | --- | --- |
-| 20003 → 20001 | 228.87 / 229.88 秒 | 约 1174 米 | 241.55 秒，视觉恢复超时 |
-| 20001 → 20003 | 263.73 / 264.80 秒 | 约 573 米 | 273.33 秒，视觉恢复超时 |
-
-两次任务中发现机的有效视觉均只保持了少量采样帧，接应机没有独立确认目标。第一架接应机即使按 32 米/秒直线飞到 350 米范围，也约需 26 秒，而任务约 13 秒就因失去视觉释放；第二次还受转向、飞行和相机搜索影响。距离来自公开队友位姿与图像定位估计，不是隐藏真值。第三架 20002 持续搜索，未参加两次跟踪任务。
-
-接下来首先改进发现机的持续视觉保持和接应机的目标重获，检查转入盘旋后的云台视角、候选尺度、丢帧与像素轨迹关联。不能只延长失联超时，让飞机追逐越来越旧的坐标。第三架的多目标候选队列仍未实现。
-
-本地联合观察最大值与官方三个目标 `coop_ticks` 均为 0；外部约 5 Hz 的赛后采样也没有有效双机共同帧。三机推理异常及异步丢弃均为 0。原始 `acknowledged` 标记在任务释放后可能残留，赛后统计只将活动成员的 APPROACH/TRACK_PAIR/RECOVER 状态计为接应确认，不能直接累计该标记所有出现次数。
-
-原始评分：`artifacts/vision/runs/capture-v25-seed101/official/coop_decoy_1789204480.evaluation.json`。分析：`artifacts/checks/capture-v25-101-capture-analysis.json`、`capture-v25-101-analysis.json`、`capture-v25-101-judge-analysis.json`、`capture-v25-recruitment-distances.json`。[任务关键照片](../artifacts/checks/capture-v25-missions-review.jpg)对照发现、失去有效视觉及接应阶段；[公开照片与航迹回放](../artifacts/checks/capture-v25-replay.html)可离线打开。v25 与 v22 回合时长不同，不能据此认定新版本整体优于基线。
+仅保留当前 v26 候选、v22 冻结基线及当前训练依赖。v25 旧包、旧回合和原始裁判 trace 可恢复归档在本机 `.local-archive/capture-development/previous-v25/`，不加入 Git；原始评分副本 `artifacts/checks/capture-v25-evaluation.json`、来源包清单 `capture-v25-package.json` 和分析摘要保留。v25 是 300 秒 / 9.27 分实验，不能与 v26 完整回合直接作因果对照。v23/v24 失败实验已归档，当前入口不再指向旧包。

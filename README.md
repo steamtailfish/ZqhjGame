@@ -1,10 +1,12 @@
 # ZqhjGame
 
-红枫 2026 赛题二的多无人机视觉协同代码。**当前已验证基线为 score-v22：正式场景 seed101、600 秒回合取得 9.06 分，2 次坐标报告，0/3 目标清除，0 惩罚，定位 RMSE 11.27 米。** 这是一次非零成绩，尚未实现双机持续捕获或稳定高分。
+红枫 2026 赛题二的多无人机视觉协同代码。**当前推荐复测版本为 capture-v26：正式场景 seed101，请求 600 秒、记录 599.9667 秒，取得 18.67 分，4 次坐标报告，定位 RMSE 9.67 米，0 惩罚，0/3 目标清除。** 官方 `passed=false`，尚未完成双机连续 20 秒捕获，也未验证多 seed 稳定性。
 
-当前实际方法：轮廓候选 → 64×64 局部 CNN 真假/背景分类 → 图像运动关联与局部地面定位 → 条带搜索、广播协同和解析轨迹规划 → 严格短轨迹坐标上报。参考了 Gou 围捕策略引导和 YOPO 运动基元/代价思想，但 **v22 没有使用 YOPO 学习评分头，也不是图像到轨迹的端到端网络**。
+当前实际方法：轮廓候选 → 64×64 局部 CNN 真假/背景分类 → 图像运动关联与局部地面定位 → 条带搜索、广播双机接应和解析轨迹规划 → 严格短轨迹坐标上报。参考了 Gou 围捕策略引导和 YOPO 运动基元/代价思想，但 **当前得分包没有使用 YOPO 学习评分头，也不是图像到轨迹的端到端网络**。
 
-2026-09-12 新增协同候选 **capture-v25：300 秒针对性回合取得 9.27 分，2 次报告、RMSE 8.75 米、0 惩罚、0/3 清除；两次任务已完成召集与接应确认，但尚未形成双机共同观察。** 新增三机搜索、独立视觉确认、接应状态机和最多 1.5 秒的云台稳定窗口。方法、复测命令、两轮失败记录与当前限制见 [双机接应说明](docs/COOPERATIVE_CAPTURE.md)。尚未做 v25 的完整 600 秒及多 seed 复测。
+v26 只改进已确认任务的云台指向：用世界视线即时瞄准并补偿机头转向，保留搜索、VERIFY、识别、报告门限和 appearance-v3 权重，没有重新训练。官方首次记录到两个目标的有效协同累计：`coop_ticks` 分别为 35、124，第三个为 0；前两个目标各发生一次重置，仍未连续满 20 秒。18.67 分全部来自坐标精度项，不能称为捕获分。方法、证据和命令见 [双机接应说明](docs/COOPERATIVE_CAPTURE.md)。
+
+score-v22 的完整 600 秒单 seed 基线保持冻结：9.06 分、2 次报告、RMSE 11.27 米、0 惩罚、0 清除。v26 本轮高于该基线；v25 的 300 秒旧回合为 9.27 分，时长不同，不作直接性能比较。
 
 ## 队友从这里开始
 
@@ -38,14 +40,14 @@ hf2026-sim-windows/              # 官方发行包，单独准备
    └─ artifacts/               # 当前权重、冻结包、数据、日志，Git LFS
 ```
 
-**当前 v22 的全部必要资产已通过 Git LFS 纳入仓库。** 安装 Git LFS 后克隆，执行 `git lfs pull`，再按[资产清单](docs/ARTIFACT_HANDOFF.md)校验。官方 SDK/UE 与本机虚拟环境需单独准备；旧实验资产已移出当前目录，不上传。
+`artifacts/` 使用 Git LFS，交接范围为当前 v26、冻结 v22 基线、appearance-v3 及训练依赖和必要诊断。安装 Git LFS 后克隆，执行 `git lfs pull`，再按[资产清单](docs/ARTIFACT_HANDOFF.md)校验。官方 SDK/UE 与本机虚拟环境需单独准备；本机旧实验归档不上传。
 
 环境与冻结包齐备后，从本仓库根目录执行一次完整回合：
 
 ```powershell
-$runDir = "artifacts/vision/runs/v22-$(Get-Date -Format yyyyMMdd-HHmmss)-seed104"
+$runDir = "artifacts/vision/runs/capture-v26-$(Get-Date -Format yyyyMMdd-HHmmss)-seed104"
 .\vision.cmd run --ue-direct --duration 600 --seed 104 `
-  --submission artifacts/submission/score-v22/agent.py `
+  --submission artifacts/submission/capture-v26/agent.py `
   --enable-reports --max-photos 500 --output $runDir
 ```
 
@@ -53,9 +55,9 @@ seed104 是复测示例，不是已验证成绩。必须等回合结束，读取
 
 ## 开发原则
 
-- 保留 `artifacts/submission/score-v22/` 原样；修改源码后导出到新的版本目录并重新评估。
+- 保留 `artifacts/submission/score-v22/` 基线与已评估的 v26 包原样；修改源码后导出到新的版本目录并重新评估。
 - 在线仅使用本机公开照片/位姿/briefing、合法广播和实例状态。官方文件只读，裁判诊断仅在回合结束后进行。
 - 每次结果记录代码及权重哈希、seed、仿真结束时间、总分、报告数、清除数、惩罚和 RMSE。
 - 当前优先补齐双机对同一真目标持续 20 秒的实际捕获，具体任务见[已知问题](docs/KNOWN_ISSUES.md)。
 
-当前训练与基线推理命令见 [QUICKSTART.md](docs/QUICKSTART.md)，新协同候选见 [COOPERATIVE_CAPTURE.md](docs/COOPERATIVE_CAPTURE.md)。保留冻结 v22 供回归；学习研究源码尚未参与当前得分。
+当前训练、导出与 v26 推理命令见 [QUICKSTART.md](docs/QUICKSTART.md)，协同方法见 [COOPERATIVE_CAPTURE.md](docs/COOPERATIVE_CAPTURE.md)。保留冻结 v22 供回归；学习研究源码尚未参与当前得分。

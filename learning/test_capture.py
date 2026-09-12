@@ -1,17 +1,18 @@
 """Public-message tests of recruitment, own visual confirmation and loss handling."""
 from pathlib import Path
-import sys,unittest
+import math,sys,unittest
 from dataclasses import replace
 from types import SimpleNamespace
 sys.path[:0]=[str(Path(__file__).resolve().parents[1]/'src'),str(Path(__file__).resolve().parents[2])]
-from zqhj_capture import (CaptureCoordinator,CaptureSight,CaptureSearchAgent,
+from zqhj_capture import (CaptureCoordinator,CaptureMission,CaptureSight,CaptureSearchAgent,
                          SEARCH,VERIFY,OFFER,APPROACH,TRACK,RECOVER,RELEASE)
 from zqhj_comm import Packet,encode,decode
 from zqhj_state import LocalFrame
 from zqhj_vision import PixelBox
 from zqhj_visual_geometry import GeoEstimate
 from zqhj_score_search import ScoreSearchAgent
-from competition.sdk.core.observation import AreaSpec,Detection,MissionBriefing,Observation,ScoreView,SelfView
+from zqhj_localization import camera_basis
+from competition.sdk.core.observation import AreaSpec,Detection,Message,MissionBriefing,Observation,ScoreView,SelfView
 
 
 class CaptureTests(unittest.TestCase):
@@ -144,6 +145,111 @@ class CaptureTests(unittest.TestCase):
             a.fast_geo_hits=0;a.photo_time=2.6
             self.assertNotEqual(a.aim_gimbal(own,2.6,0.,-80.),(own.gimbal_pan,own.gimbal_tilt))
         finally:a.close_detector()
+
+    def camera_agent(self,uid='alpha',target=(0.,0.)):
+        a=CaptureSearchAgent(uid);a.reset();a.frame=self.frame
+        self.addCleanup(a.close_detector)
+        a.capture.adopt(CaptureMission('alpha',1,'charlie',target,(0.,0.),200.,
+                                     1.,1.,100.,1.),1.)
+        a.capture.phase=APPROACH
+        return a
+
+    def assert_camera_hits(self,own,orientation,target,ground=200.):
+        # Check the resulting world ray's ground intersection, independently
+        # of the controller's bearing/tilt calculation.
+        ray,_,_=camera_basis(*orientation,own.heading_deg,'heading_plus_pan')
+        self.assertLess(ray[2],0.)
+        distance=(ground-own.alt)/ray[2]
+        x,y=self.frame.xy(own.lat,own.lon)
+        hit=(x+ray[0]*distance,y+ray[1]*distance)
+        self.assertLess(math.dist(hit,target),1e-5)
+
+    def test_confirmed_camera_compensates_turns_across_heading_wrap(self):
+        a=self.camera_agent(target=(250.,-100.));own=self.own('alpha')
+        previous=None
+        for heading in (165.,179.,181.,210.,350.,359.,1.,30.):
+            with self.subTest(heading=heading):
+                own.heading_deg=heading
+                orientation=a.aim_gimbal(own,1.,0.,-80.,formation=True)
+                self.assert_camera_hits(own,orientation,a.capture.mission.target)
+                self.assertGreaterEqual(orientation[0],-180.)
+                self.assertLessEqual(orientation[0],180.)
+                if previous:
+                    old_heading,old_pan=previous
+                    residual=(heading-old_heading+orientation[0]-old_pan+180.)%360.-180.
+                    self.assertAlmostEqual(residual,0.,places=7)
+                previous=heading,orientation[0]
+                own.gimbal_pan,own.gimbal_tilt=orientation
+
+    def test_confirmed_camera_updates_for_current_aircraft_translation(self):
+        a=self.camera_agent();own=self.own('alpha');orientations=[]
+        for x,y in ((0.,-320.),(160.,-200.),(250.,100.)):
+            own.lat,own.lon=self.frame.geo(x,y)
+            orientation=a.aim_gimbal(own,1.,0.,-80.,formation=True)
+            self.assert_camera_hits(own,orientation,(0.,0.))
+            orientations.append(orientation)
+            own.gimbal_pan,own.gimbal_tilt=orientation
+        self.assertGreater(abs(orientations[1][0]-orientations[0][0]),20.)
+        self.assertNotAlmostEqual(orientations[1][1],orientations[0][1])
+
+    def test_near_nadir_pan_change_keeps_world_ground_point(self):
+        a=self.camera_agent(target=(50.,-320.));own=self.own('alpha')
+        for heading in (0.,90.,180.,270.):
+            own.heading_deg=heading
+            orientation=a.aim_gimbal(own,1.,0.,-80.,formation=True)
+            self.assertLess(orientation[1],-80.)
+            self.assert_camera_hits(own,orientation,(50.,-320.))
+            own.gimbal_pan,own.gimbal_tilt=orientation
+
+    def test_partner_aims_broadcast_point_without_claiming_visual_or_report(self):
+        owner=CaptureCoordinator('alpha')
+        owner.step(self.own('alpha'),self.initial_peers(),self.frame,0.,self.sight(0.))
+        a=CaptureSearchAgent('charlie');a.reset();a.frame=self.frame
+        self.addCleanup(a.close_detector)
+        own=self.own('charlie')
+        messages=(Message('alpha',encode(self.message(owner,.5)),.5),
+                  Message('bravo',encode(self.message(CaptureCoordinator('bravo'),.5)),.5))
+        obs=Observation(SelfView('charlie',own.lat,own.lon,500.,90.,22.,0.,-80.,50.,Detection(False,0.)),
+            messages,MissionBriefing('charlie',3,AreaSpec(36.98,37.02,120.98,121.02),
+                                     score_view=ScoreView(.5,(),False,0,3,1.)))
+        commands=a.decide(obs,.1)
+        camera=next(c.params for c in commands if c.verb=='component.gimbal_tracking.set_orientation')
+        self.assert_camera_hits(own,(camera['pan'],camera['tilt']),(0.,0.))
+        self.assertGreater(abs(camera['pan']-own.gimbal_pan),60.)
+        self.assertEqual(a.capture.phase,APPROACH)
+        self.assertTrue(a.capture.ack)
+        self.assertFalse(a.capture.visible)
+        self.assertIsNone(a.capture_bound)
+        self.assertEqual(a.capture.joint_s,0.)
+        self.assertFalse(any(c.verb=='agent.report' for c in commands))
+
+    def test_repeated_pixel_frame_does_not_integrate_camera_error(self):
+        a=self.camera_agent(target=(250.,-100.));own=self.own('alpha')
+        a.pixel_target=PixelBox(850,650,870,670,.99,1024,768,'true_vehicle',.95)
+        a.pixel_hits=8;a.pixel_identity_hits=8;a.pixel_track_id=1
+        a.pixel_pose=(0.,-80.,90.,50.);a.pixel_own=self.own('alpha')
+        a.photo_time=1.;a.photo_digest='same-public-photo';a.motion_verified_until=8.
+        a.capture.visible=True
+        orientations=[]
+        for now in (1.,1.2,1.4,1.6):
+            orientation=a.aim_gimbal(own,now,0.,-80.,formation=True)
+            self.assert_camera_hits(own,orientation,a.capture.mission.target)
+            orientations.append(orientation)
+            own.gimbal_pan,own.gimbal_tilt=orientation
+        self.assertTrue(all(v==orientations[0] for v in orientations))
+        self.assertEqual(a.photo_digest,'same-public-photo')
+        self.assertEqual(a.pixel_hits,8)
+
+    def test_unassigned_aircraft_preserves_search_camera_during_pair(self):
+        a=self.camera_agent(uid='bravo',target=(250.,-100.))
+        baseline=ScoreSearchAgent('bravo');baseline.reset()
+        self.addCleanup(baseline.close_detector)
+        own=self.own('bravo')
+        for phase in (SEARCH,RELEASE):
+            with self.subTest(phase=phase):
+                a.capture.phase=phase
+                self.assertEqual(a.aim_gimbal(own,1.,25.,-60.,formation=False),
+                                 baseline.aim_gimbal(own,1.,25.,-60.,formation=False))
 
     def test_completed_local_window_releases_without_claiming_judge(self):
         agents,history=self.simulate(34.)

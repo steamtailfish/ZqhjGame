@@ -1,6 +1,6 @@
 # 安装、运行、训练与复现
 
-适用 score-v22。**本页所有命令均在 `ZqhjGame` 仓库根目录的 PowerShell 中执行**，不是官方发行包根目录。以下复测使用 seed104，仅作命令示例；已记录的 9.06 分来自 seed101。
+适用当前 capture-v26；score-v22 保留为回归基线。**本页所有命令均在 `ZqhjGame` 仓库根目录的 PowerShell 中执行**，不是官方发行包根目录。以下复测使用 seed104，仅作命令示例；v26 已记录的 18.67 分来自 seed101 的完整 600 秒请求回合，不代表多 seed 稳定成绩。
 
 ## 1. 首次准备
 
@@ -15,7 +15,7 @@ Set-Location ZqhjGame
 git lfs pull
 ```
 
-按[资产清单](ARTIFACT_HANDOFF.md)下载 Git LFS 文件，当前包、训练数据和测试照片均已包含。运行现有包不需要训练集，也不需要 `vision.cmd init` 下载/复制旧 YOLO 权重。
+按[资产清单](ARTIFACT_HANDOFF.md)下载并检查 Git LFS 文件。运行现有包不需要训练集，也不需要 `vision.cmd init` 下载/复制旧 YOLO 权重；v26 沿用 appearance-v3，无需重新训练。
 
 新机器使用 Python 3.13 重建项目虚拟环境；开发机验证版本为 3.13.9，CPU Torch 2.7.1。不要拷贝开发机 `.venv-learning`。`py` 需要 Windows Python Launcher；未配置时用本机已安装的 Python 3.13 可执行文件替换第一条命令。
 
@@ -27,14 +27,16 @@ py -3.13 -m venv .venv-learning
 .\.venv-learning\Scripts\python.exe -c "import sys,torch,cv2,numpy; print(sys.version); print(torch.__version__,cv2.__version__,numpy.__version__)"
 ```
 
-依赖按现有 `requirements-vision.txt` 安装，包含历史视觉工具需要的 Ultralytics；这不表示 v22 在线使用 YOLO。若依赖源或版本不可用，记录失败，不要悄悄换版本后声称复现原环境。仓库没有完整的传递依赖锁文件。
+依赖按现有 `requirements-vision.txt` 安装，包含历史视觉工具需要的 Ultralytics；这不表示当前在线使用 YOLO。若依赖源或版本不可用，记录失败，不要悄悄换版本后声称复现原环境。仓库没有完整的传递依赖锁文件。
 
 ## 2. 不启动引擎的检查
 
-确认当前工作目录和三个关键资产哈希。完整期望值见[资产清单](ARTIFACT_HANDOFF.md)。
+确认当前工作目录、v26 代码/权重与冻结 v22 基线哈希。完整期望值见[资产清单](ARTIFACT_HANDOFF.md)。
 
 ```powershell
 git status --short --branch
+Get-FileHash artifacts/submission/capture-v26/agent.py -Algorithm SHA256
+Get-FileHash artifacts/submission/capture-v26/vision.pt -Algorithm SHA256
 Get-FileHash artifacts/submission/score-v22/agent.py -Algorithm SHA256
 Get-FileHash artifacts/submission/score-v22/vision.pt -Algorithm SHA256
 Get-FileHash artifacts/submission/score-v22/baseline_evaluation.json -Algorithm SHA256
@@ -42,8 +44,11 @@ Get-FileHash artifacts/submission/score-v22/baseline_evaluation.json -Algorithm 
 .\run.cmd check
 .\run.cmd test
 .\vision.cmd verify
+.\.venv-learning\Scripts\python.exe -B -X utf8 learning/test_capture.py
 .\.venv-learning\Scripts\python.exe -B -X utf8 learning/test_score_search.py
+.\.venv-learning\Scripts\python.exe -B -X utf8 learning/test_async_vision.py
 .\.venv-learning\Scripts\python.exe -B -X utf8 learning/test_visual_geometry.py
+.\.venv-learning\Scripts\python.exe -B -X utf8 learning/test_judge_trace.py
 ```
 
 `run.cmd` 优先使用 `ZQHJ_PYTHON`，其次本项目 `.venv`，最后发行包 `../python/python.exe`；`vision.cmd` 固定使用 `.venv-learning/Scripts/python.exe`。检查通过只证明对应软件链路，不证明比赛得分。
@@ -51,30 +56,32 @@ Get-FileHash artifacts/submission/score-v22/baseline_evaluation.json -Algorithm 
 以下隔离检查依赖的固定真车测试照片已随 Git LFS 提供；缺文件时先执行 `git lfs pull`：
 
 ```powershell
-$checkPath = "artifacts/checks/v22-isolated-$(Get-Date -Format yyyyMMdd-HHmmss).json"
+$checkPath = "artifacts/checks/capture-v26-isolated-$(Get-Date -Format yyyyMMdd-HHmmss).json"
 .\.venv-learning\Scripts\python.exe -B -I tools/check_visual_package.py `
-  artifacts/submission/score-v22/agent.py --output $checkPath
+  artifacts/submission/capture-v26/agent.py --output $checkPath
 ```
 
-## 3. 运行冻结 v22 并读取结果
+## 3. 运行已评估的 v26 并读取结果
 
 关闭自己此前启动的重复比赛，确认 6379 端口没有被另一场比赛使用。不要全局结束所有 Python / Redis 进程。先运行冻结包再修改算法，便于区分环境问题和策略退化。
 
 ```powershell
-$runDir = "artifacts/vision/runs/v22-$(Get-Date -Format yyyyMMdd-HHmmss)-seed104"
+$runDir = "artifacts/vision/runs/capture-v26-$(Get-Date -Format yyyyMMdd-HHmmss)-seed104"
 .\vision.cmd run --ue-direct --duration 600 --seed 104 `
-  --submission artifacts/submission/score-v22/agent.py `
+  --submission artifacts/submission/capture-v26/agent.py `
   --enable-reports --max-photos 500 --output $runDir
 if ($LASTEXITCODE -ne 0) { throw '运行失败，先检查本次 run.json 和日志' }
 
 # 必须等待上面的回合结束；同一 PowerShell 会话保留 $runDir。
 .\.venv-learning\Scripts\python.exe -B -X utf8 tools/analyze_score_run.py `
-  $runDir --output "$runDir/analysis.json"
+  $runDir --output "$runDir/score-analysis.json"
+.\.venv-learning\Scripts\python.exe -B -X utf8 tools/analyze_capture_run.py `
+  $runDir --output "$runDir/capture-analysis.json"
 Get-ChildItem -LiteralPath "$runDir/official" -Filter '*.evaluation.json' |
   ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }
 ```
 
-600 秒是仿真时间，不是墙钟耗时。每次使用新输出目录，不覆盖旧结果。`--max-photos 500` 是每机保存照片上限，不是推理帧数上限。可将 `--duration` 改为 60 做接入检查，但短回合不能替代完整正式评分。
+600 秒是仿真时间，不是墙钟耗时。每次使用新输出目录，不覆盖旧结果。`--max-photos 500` 是每机保存照片上限，不是推理帧数上限。可将 `--duration` 改为 60 做接入检查，但短回合不能替代完整正式评分。如需 v22 对照，将提交路径替换为 `artifacts/submission/score-v22/agent.py`，并另用新输出目录；不要同时运行两场比赛。
 
 **保留 `--enable-reports`**：冻结包直接被 SDK 构造时默认开启有门限的上报，但本地 `vision_runner.py` 会用该命令行开关覆盖设置；省略时会关闭上报。`--submission` 使用导出包内的代码及同目录 `vision.pt`，不会自动执行你刚修改的 `src/`。
 
@@ -90,16 +97,16 @@ Get-ChildItem -LiteralPath "$runDir/official" -Filter '*.evaluation.json' |
 
 ## 4. 修改源码后重新导出
 
-若运行新加入的“三机搜索、双机接应”策略，请使用 [COOPERATIVE_CAPTURE.md](COOPERATIVE_CAPTURE.md) 中的 `--cooperative-capture` 命令。下面的 `--distributed-search` 仍选择原搜索策略。
+当前“三机搜索、双机接应”策略使用 `--cooperative-capture`，方法与本轮改动见 [COOPERATIVE_CAPTURE.md](COOPERATIVE_CAPTURE.md)。已有的 `--distributed-search` 只选择原搜索策略，不能替代该开关。
 
-以下保留 appearance-v3 权重，导出当前源码到新包。显式指定冻结 `agent.py` 作为 `--controller` 的函数来源，明确导出依赖（默认值也已改为当前冻结包）。导出器会提取其中 `_policy_weights`；`--distributed-search` 仍选择解析规划，未启用这些学习权重。
+以下保留 appearance-v3 权重，导出当前源码到新包。显式指定冻结 v22 `agent.py` 作为 `--controller` 的函数来源，明确导出依赖。导出器会提取其中 `_policy_weights`；当前协同分支选择解析规划，未启用这些学习权重。不能覆盖已评估或正在运行的 v26 包。
 
 ```powershell
 $exportDir = "artifacts/submission/dev-$(Get-Date -Format yyyyMMdd-HHmmss)"
 .\vision.cmd export `
   --controller artifacts/submission/score-v22/agent.py `
   --weights artifacts/submission/score-v22/vision.pt `
-  --patch-appearance --geometry estimated --distributed-search `
+  --patch-appearance --geometry estimated --cooperative-capture `
   --reports-default-on --output $exportDir
 ```
 
@@ -120,8 +127,8 @@ $exportDir = "artifacts/submission/retrained-$(Get-Date -Format yyyyMMdd-HHmmss)
 .\vision.cmd export `
   --controller artifacts/submission/score-v22/agent.py `
   --weights "$modelDir/appearance.pt" `
-  --patch-appearance --geometry estimated --distributed-search `
+  --patch-appearance --geometry estimated --cooperative-capture `
   --reports-default-on --output $exportDir
 ```
 
-此命令不启动比赛。默认不启用额外的 `--appearance-jitter` 实验，其他训练参数见脚本和 `training.json`。重训权重不继承 9.06 分，须独立检查和正式评测。YOPO 研究源码不属于这条 v22 外观训练流程，旧研究权重已移出当前资产。
+此命令不启动比赛。默认不启用额外的 `--appearance-jitter` 实验，其他训练参数见脚本和 `training.json`。重训权重不继承 v26 的 18.67 分或 v22 的 9.06 分，须独立检查和正式评测。YOPO 研究源码不属于这条局部外观训练流程，旧研究权重已移出当前资产。

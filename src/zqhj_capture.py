@@ -328,12 +328,20 @@ class CaptureSearchAgent(ScoreSearchAgent):
             # bounded hold prevents the pixel servo from destroying that pair.
             if self.fast_geo_hits<2 and now<self.capture_camera_until:
                 return own.gimbal_pan,own.gimbal_tilt
-        if formation and m and self.my_uid in (m.owner,m.partner) and not self.capture.visible:
+        if formation and m and self.my_uid in (m.owner,m.partner) and self.capture.phase!=RELEASE:
+            # The mission point already incorporates fresh, independently bound
+            # local pixels or legal partner updates. Aim from the CURRENT own
+            # position and heading, so body turns and translation are fully
+            # compensated even when processing a repeated image. point_gimbal
+            # accepts an orientation directly; the search servo's small relative
+            # pan steps cannot keep up with a 30 deg/s aircraft turn, especially
+            # near nadir where a large pan change is a small world LOS change.
+            # The same command acquires a broadcast point immediately; it does
+            # not establish identity, visibility, or authorize a target report.
             x,y=self.frame.xy(own.lat,own.lon);target=m.predict(now)
             pan=wrap(math.degrees(math.atan2(target[0]-x,target[1]-y))-own.heading_deg)
             tilt=-math.degrees(math.atan2(max(60.,own.alt-m.ground),max(1.,math.dist((x,y),target))))
-            return (wrap(own.gimbal_pan+max(-6.,min(6.,wrap(pan-own.gimbal_pan)))),
-                    own.gimbal_tilt+max(-3.,min(3.,tilt-own.gimbal_tilt)))
+            return pan,max(-89.,min(-15.,tilt))
         return super().aim_gimbal(own,now,pan,tilt,formation)
 
     def decide(self,obs,dt):

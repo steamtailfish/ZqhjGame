@@ -1,6 +1,6 @@
-# 当前 v22 资产清单
+# 当前资产与冻结基线清单
 
-更新日期：2026-09-11。当前资产已纳入 Git LFS，包括冻结提交包、训练数据及依赖图片、正式实测记录与技术 Word。无需队友另行索取这些文件。官方 SDK/UE 发行包、本机虚拟环境和已清理的历史实验不上传。
+更新日期：2026-09-12。当前交接范围为 capture-v26、冻结 score-v22 基线、appearance-v3 训练数据及依赖图片、必要实测记录和技术文档，`artifacts/` 统一使用 Git LFS。官方 SDK/UE 发行包、本机虚拟环境和本机旧实验归档不上传。旧 Word 是 v22 技术快照，不代表 v26 当前方法或结果。
 
 ## 下载与检查
 
@@ -15,31 +15,46 @@ git lfs pull
 
 已经克隆的队友在仓库根目录执行 `git pull --ff-only`、`git lfs install --local`、`git lfs pull`。若权重或照片文件只有几行且以 `version https://git-lfs.github.com/spec/v1` 开头，那只是指针，需要完成 LFS 下载。
 
-当前文件列表和 SHA256 记录在 [V22_ASSETS.json](V22_ASSETS.json)，在准备好 Python 后校验：
+v22 基线及训练依赖的文件列表和 SHA256 记录在 [V22_ASSETS.json](V22_ASSETS.json)，在准备好 Python 后校验：
 
 ```powershell
 .\.venv-learning\Scripts\python.exe -B -X utf8 tools/check_v22_assets.py
 ```
 
-该检查不启动比赛，不加载模型；验证每个已发布资产的内容、体积和哈希。下载失败时检查 Git LFS 输出，不修改 manifest 绕过错误。
+该检查不启动比赛，不加载模型；仅验证清单内 v22 基线及依赖资产的内容、体积和哈希，**不覆盖新增 v26 文件**。v26 关键哈希见下方，并通过 `tools/check_visual_package.py` 检查独立包。下载失败时检查 Git LFS 输出，不修改 manifest 绕过错误。
 
 ## 保留范围
 
 | 用途 | 当前路径 |
 | --- | --- |
-| 冻结提交包 | `artifacts/submission/score-v22/` 全部 9 个文件；压缩副本 `artifacts/submission/first-score-v22.zip` |
+| 当前推荐运行包 | `artifacts/submission/capture-v26/`，含 `agent.py`、`vision.pt`、manifest、依赖与技术说明 |
+| 冻结回归基线 | `artifacts/submission/score-v22/` 全部 9 个文件；压缩副本 `artifacts/submission/first-score-v22.zip` |
 | 当前权重与训练记录 | `artifacts/vision/models/appearance-v3/appearance.pt`、`training.json` |
 | 审核训练数据 | `artifacts/vision/datasets/appearance-data-v3/accepted.jsonl`，以及所有 image / source_photo 依赖图片 |
-| 完整正式回合 | `artifacts/vision/runs/score600-v22-seed101/`，含公开观测、照片、动作和官方结果 |
-| 当前验证与诊断 | `artifacts/checks/` 中保留的 v22 隔离、分析、回放和一致性记录 |
-| 当前技术报告 | `artifacts/reports/v22-technical/ZqhjGame_v22_技术报告.docx`，Markdown 版见 [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) |
+| 当前完整正式回合 | `artifacts/vision/runs/capture-v26-seed101/`，600 秒请求 / 599.9667 秒记录，18.67 分、4 报告、0 清除、0 惩罚 |
+| 基线完整正式回合 | `artifacts/vision/runs/score600-v22-seed101/`，含公开观测、照片、动作和 9.06 分官方结果 |
+| 当前验证与诊断 | `artifacts/checks/capture-v26-isolated.json`、`capture-v26-101-analysis.json`、`capture-v26-101-capture-analysis.json`、`capture-v26-review-01.jpg`、`capture-v26-replay.html` 等；另保留必要基线与旧实验摘要 |
+| 当前协同说明 | [COOPERATIVE_CAPTURE.md](COOPERATIVE_CAPTURE.md)，当前状态见 [STATUS.md](../STATUS.md) |
+| v22 技术报告快照 | `artifacts/reports/v22-technical/ZqhjGame_v22_技术报告.docx`，Markdown 快照见 [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md)，本轮不改写旧报告 |
 | 参考资料 | `artifacts/papers/` 中论文阅读笔记和图示 |
 
 部分当前训练图片位于带 v1/v2 名称的目录，这是 appearance-v3 的依赖，不是保留旧算法版本。不要再次按目录名删除。固定隔离照片也已保留：`artifacts/vision/fixtures/true-v2/observations/20002/62c13d88321f8e68637990aca8d0ec440b10194091b18397110322f876452299.image`。
 
-当前只保留 score-v22 和 appearance-v3；历史提交包、模型、回合及中间输出已移出 artifacts。本机 `.local-archive/pre-v22-20260911/` 是可恢复隔离区，已被 Git 忽略，不会上传。既有 Git 提交历史不重写。
+当前活动资产保留 capture-v26、score-v22 回归基线和 appearance-v3 依赖。被替代的 v25 包、完整回合和原始外部跟踪文件移入本机 `.local-archive/capture-development/` 可恢复归档；其原始评分副本 `artifacts/checks/capture-v25-evaluation.json`、包来源记录 `capture-v25-package.json` 和诊断摘要保留。更早实验位于 `.local-archive/pre-v22-20260911/` 或 capture-development 归档。整个 `.local-archive/` 被 Git 忽略，不上传，不重写既有 Git 提交历史。
 
-## 冻结包关键哈希
+## v26 关键哈希
+
+本轮原始评分文件为 `artifacts/vision/runs/capture-v26-seed101/official/coop_decoy_1789219639.evaluation.json`。代码、权重和评分分别校验：
+
+| 文件 | SHA256 |
+| --- | --- |
+| `artifacts/submission/capture-v26/agent.py` | `92c4f8e7fdde358742dc7c558ee502afd124f87a37f7f7367f1739c58ae2b75f` |
+| `artifacts/submission/capture-v26/vision.pt` | `819381fa5b383310592238f0cc61843c5ac808228bc4ec9d997295c9c822a0cf` |
+| v26 原始 `coop_decoy_1789219639.evaluation.json` | `f75cf3973b0568cd3e1990ef86b465b3c799a93c5b8efd8db7172a9c7de8e285` |
+
+v26 权重与 v22 相同；本轮只改进已确认任务的世界视线云台控制，没有重新训练。18.67 分来自坐标精度，官方仍为 `passed=false`、0 清除；有效协同帧不能当作连续 20 秒捕获。单 seed 结果不证明稳定高分。
+
+## v22 冻结包关键哈希
 
 | 文件 | SHA256 |
 | --- | --- |
@@ -47,7 +62,7 @@ git lfs pull
 | `vision.pt` | `819381fa5b383310592238f0cc61843c5ac808228bc4ec9d997295c9c822a0cf` |
 | `baseline_evaluation.json` | `c86139edcc5623cd04b1246d36eb4c1bddce6e3d19cb93673020355a92df0159` |
 
-冻结包保持原样，附带文档是当时快照；当前使用步骤以 QUICKSTART 为准，代码、权重和原始结果字节不变。
+冻结 v22 保持原样，附带文档是当时快照；当前使用步骤以 QUICKSTART 为准，代码、权重和原始结果字节不变。已评估的 v26 代码和权重也不覆盖，下一轮修改必须导出到新目录。
 
 ## 训练数据路径迁移
 
