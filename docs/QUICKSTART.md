@@ -90,6 +90,8 @@ Get-ChildItem -LiteralPath "$runDir/official" -Filter '*.evaluation.json' |
 
 ## 4. 修改源码后重新导出
 
+若运行新加入的“三机搜索、双机接应”策略，请使用 [COOPERATIVE_CAPTURE.md](COOPERATIVE_CAPTURE.md) 中的 `--cooperative-capture` 命令。下面的 `--distributed-search` 仍选择原搜索策略。
+
 以下保留 appearance-v3 权重，导出当前源码到新包。显式指定冻结 `agent.py` 作为 `--controller` 的函数来源，明确导出依赖（默认值也已改为当前冻结包）。导出器会提取其中 `_policy_weights`；`--distributed-search` 仍选择解析规划，未启用这些学习权重。
 
 ```powershell

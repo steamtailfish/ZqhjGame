@@ -10,6 +10,7 @@ from zqhj_state import valid_geo
 # local track number, candidate geo, observation age, hits, uncertainty.
 WIRE = struct.Struct('!BHIiiHBHiiHBB')
 WIRE_V2 = struct.Struct('!BHIiiHBHiiHBBhB')
+WIRE_V3 = struct.Struct('!BHIiiHBHiiHBBhBBbb')
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,13 @@ class Packet:
     sigma_m: float = 100.
     ground_m: float | None = None
     identity: str = 'unknown'
+    capture: bool = False
+    owner_slot: int = 0
+    partner_slot: int = 0
+    stage: int = 0
+    visible: bool = False
+    target_vx: float = 0.
+    target_vy: float = 0.
 
 
 def encode(p):
@@ -36,16 +44,23 @@ def encode(p):
             and math.isfinite(p.heading) and 0 <= p.speed <= 40
             and 0 <= p.sigma_m <= 255):
         raise ValueError('invalid packet values')
-    extended=p.ground_m is not None or p.identity!='unknown'
+    extended=p.capture or p.ground_m is not None or p.identity!='unknown'
     if p.identity not in ('unknown','true_vehicle','decoy_vehicle'):
         raise ValueError('invalid identity')
     if p.ground_m is not None and (not math.isfinite(p.ground_m) or not -1000<=p.ground_m<=2000):
         raise ValueError('invalid ground estimate')
-    values=(2 if extended else 1,p.seq % 65536,int(p.time_s*10),round(p.lat*1e6),round(p.lon*1e6),
+    if p.capture and (not 0<=p.owner_slot<=3 or not 0<=p.partner_slot<=3 or not 0<=p.stage<=6
+                      or not all(math.isfinite(v) and abs(v)<=25 for v in (p.target_vx,p.target_vy))):
+        raise ValueError('invalid capture status')
+    values=(3 if p.capture else 2 if extended else 1,p.seq % 65536,int(p.time_s*10),round(p.lat*1e6),round(p.lon*1e6),
                     round(p.heading % 360*100) % 36000,round(p.speed),p.track_id,
                     round(p.target_lat*1e6),round(p.target_lon*1e6),
                     math.ceil(p.age_s*10),min(255,p.hits),math.ceil(p.sigma_m))
-    raw=(WIRE_V2.pack(*values,round(p.ground_m) if p.ground_m is not None else -32768,
+    raw=(WIRE_V3.pack(*values,round(p.ground_m) if p.ground_m is not None else -32768,
+                     ('unknown','true_vehicle','decoy_vehicle').index(p.identity),
+                     p.owner_slot | (p.partner_slot<<2) | (p.stage<<4) | (int(p.visible)<<7),
+                     round(p.target_vx*2),round(p.target_vy*2)) if p.capture else
+         WIRE_V2.pack(*values,round(p.ground_m) if p.ground_m is not None else -32768,
                      ('unknown','true_vehicle','decoy_vehicle').index(p.identity)) if extended else WIRE.pack(*values))
     payload = 'Z'+base64.b85encode(raw).decode('ascii')
     if len(payload.encode('utf-8')) > 50:
@@ -55,19 +70,25 @@ def encode(p):
 
 def decode(payload):
     try:
-        if not isinstance(payload,str) or not payload.startswith('Z') or len(payload) not in (41,45):
+        if not isinstance(payload,str) or not payload.startswith('Z') or len(payload) not in (41,45,49):
             return None
         raw = base64.b85decode(payload[1:].encode('ascii'))
-        values=(WIRE if len(payload)==41 else WIRE_V2).unpack(raw)
+        values=({41:WIRE,45:WIRE_V2,49:WIRE_V3}[len(payload)]).unpack(raw)
         version,seq,t,lat,lon,h,v,key,a,b,age,hits,sigma = values[:13]
         ground,identity=None,'unknown'
-        if len(payload)==45:
-            z,label=values[13:]
-            if version!=2 or label>2 or (z!=-32768 and not -1000<=z<=2000):return None
+        if len(payload) in (45,49):
+            z,label=values[13:15]
+            if version!=(3 if len(payload)==49 else 2) or label>2 or (z!=-32768 and not -1000<=z<=2000):return None
             ground=None if z==-32768 else float(z)
             identity=('unknown','true_vehicle','decoy_vehicle')[label]
         elif version!=1:return None
-        p = Packet(seq,t/10,lat/1e6,lon/1e6,h/100,v,key,a/1e6,b/1e6,age/10,hits,sigma,ground,identity)
+        extra={}
+        if len(payload)==49:
+            flags,vx,vy=values[15:]
+            extra=dict(capture=True,owner_slot=flags&3,partner_slot=(flags>>2)&3,
+                       stage=(flags>>4)&7,visible=bool(flags&128),target_vx=vx/2,target_vy=vy/2)
+            if extra['stage']>6 or abs(vx)>50 or abs(vy)>50:return None
+        p = Packet(seq,t/10,lat/1e6,lon/1e6,h/100,v,key,a/1e6,b/1e6,age/10,hits,sigma,ground,identity,**extra)
         if h >= 36000 or v > 40 or not valid_geo(p.lat,p.lon):
             return None
         if not valid_geo(p.target_lat,p.target_lon):

@@ -1,6 +1,6 @@
 # 团队交接总览
 
-更新日期：2026-09-11。对象：GitHub `steamtailfish/ZqhjGame`，仓库根目录为 `ZqhjGame/`。本文对应 score-v22 冻结基线；当前分支只保留 v22 的资产与状态。算法、冻结权重和官方环境不变；导出工具的默认控制函数来源已改为当前包。
+更新日期：2026-09-12。对象：GitHub `steamtailfish/ZqhjGame`，仓库根目录为 `ZqhjGame/`。下文成绩与视觉链路对应 score-v22 冻结基线。新增协同候选当前为 capture-v25，方法、命令与独立结果见 [COOPERATIVE_CAPTURE.md](COOPERATIVE_CAPTURE.md)，未替换冻结基线。
 
 ## 1. 当前做到哪里
 
@@ -40,6 +40,7 @@ v22 的关键是让已满足证据要求的短像素轨迹及时上报，不再�
 | `src/zqhj_visual_geometry.py` | 光流、单应变换、局部地面平面及定位预算 |
 | `src/zqhj_score_search.py`、`src/zqhj_team.py` | score 路线入口、队伍条带搜索、严格短轨迹报告 |
 | `src/zqhj_cooperation.py`、`src/zqhj_comm.py` | 目标接应与角色、通信编码、过期和限频 |
+| `src/zqhj_capture.py` | 新候选的发现确认、接应确认、独立视觉绑定和超时释放 |
 | `src/zqhj_planner.py` | 势场引导、固定翼候选轨迹、间距与代价筛选 |
 | `tools/train_vehicle_appearance.py` | 当前局部外观训练入口 |
 | `tools/export_visual.py` | 源码合并、权重打包、生成独立 `EntryAgent` |
@@ -80,6 +81,8 @@ git switch -c codex/your-change
 `tools/record_judge_trace.py` 等属于外部诊断工具，记录只用于回合结束后解释失败，不作为在线目标 ID、路线或训练标签。受控场景仅修改 `artifacts/` 中的副本，其分数不计为正式成绩。详细规则和接口证据见 [SDK_CONTRACT.md](SDK_CONTRACT.md)、[ENVIRONMENT_AUDIT.md](ENVIRONMENT_AUDIT.md) 与 [AGENTS.md](../AGENTS.md)。
 
 ## 7. 本次交接文档的验证
+
+本节记录 9 月 11 日基线交接检查；9 月 12 日新增协同候选的检查和正式回合单列于 [COOPERATIVE_CAPTURE.md](COOPERATIVE_CAPTURE.md)。
 
 已检查新增文档的相对链接、代码块及 PowerShell 语法，并核对运行、导出、训练入口参数。按 QUICKSTART 的显式 `--controller` 命令实际导出后，`agent.py` 与 `vision.pt` 的 SHA256 与冻结 v22 相同，三机私有模型和回调禁止文件 I/O 的隔离检查通过。证据保存在本机隔离检查记录；临时导出副本已清理，原 v22 隔离检查证据保留在 `artifacts/checks/score-v22-isolated.json`。
 

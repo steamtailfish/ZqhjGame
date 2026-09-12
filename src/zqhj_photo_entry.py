@@ -30,6 +30,8 @@ class PhotoEntryAgent(EntryAgent):
         self.pixel_hits = 0
         self.pixel_target = None
         self.pixel_pose = None
+        self.pixel_own = None
+        self.pixel_track_id = 0
         self.vision_stats = dict(inferences=0,frames_with_candidates=0,failures=0,
                                  repeated=0,missing=0,servo_commands=0,
                                  inference_wall_s=0.,max_inference_wall_s=0.)
@@ -50,6 +52,8 @@ class PhotoEntryAgent(EntryAgent):
         return pending
 
     def eligible_boxes(self,boxes):return boxes
+
+    def filter_boxes(self,boxes,own,now):return self.eligible_boxes(boxes)
 
     def search_goal(self,position,bounds):
         return self.coverage.goal(position,bounds,self.radio.peers)
@@ -102,7 +106,7 @@ class PhotoEntryAgent(EntryAgent):
             self.vision_stats['max_inference_wall_s']=max(self.vision_stats['max_inference_wall_s'],elapsed)
         self.vision_stats['inferences']+=1
         self.boxes=boxes
-        boxes=self.eligible_boxes(boxes)
+        boxes=self.filter_boxes(boxes,obs.self,now)
         if getattr(self,'enable_geometry',False):
             try:self.geometry.update(photo,obs.self,now,digest)
             except Exception:self.geometry.status='GEOMETRY_ERROR'
@@ -131,6 +135,7 @@ class PhotoEntryAgent(EntryAgent):
             else:
                 chosen=max(boxes,key=lambda b:b.confidence);matched=False
             self.pixel_hits=self.pixel_hits+1 if matched else 1
+            if not matched:self.pixel_track_id+=1
             self.pixel_target=chosen
             self.pixel_motion_px=None
             H=self.geometry.homography
@@ -151,6 +156,7 @@ class PhotoEntryAgent(EntryAgent):
             strong=(chosen.category=='true_vehicle' and chosen.confidence>=.95 and chosen.class_margin>=.9)
             self.pixel_identity_hits=self.pixel_identity_hits+1 if matched and strong else int(strong)
             self.pixel_pose=(obs.self.gimbal_pan,obs.self.gimbal_tilt,obs.self.heading_deg,obs.self.gimbal_fov_deg)
+            self.pixel_own=obs.self
             self.vision_state='PIXEL_TRACK' if self.pixel_hits >= 2 else 'PIXEL_CANDIDATE'
         else:
             self.pixel_target=None;self.pixel_hits=0;self.vision_state='NO_CANDIDATE'

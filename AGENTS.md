@@ -1,7 +1,9 @@
 # ZqhjGame 工作约定
 
 - 当前唯一保留的提交基线为 score-v22：seed101，600 秒请求 / 599.917 秒记录，9.06 分、2 报告、0/3 清除、0 惩罚、RMSE 11.27 米。三个目标 coop_ticks 均为 0，不得把精度分称为双机捕获。
-- 用户要求只保留最近版本并上传全部当前资产。当前 artifacts 仅保留 v22、appearance-v3、其依赖训练图片、正式回合、验证记录和报告。旧资产已可恢复地移入 .local-archive/pre-v22-20260911，不加入 Git；不重写既有 Git 历史。
+- 2026-09-12 新增协同状态机。capture-v23/v24 完整回合均为 0 分、0 报告、0 清除，未发起任务；当前 capture-v25 保持 VERIFY 搜索航迹并新增最多 1.5 秒的云台稳定窗口，见 docs/COOPERATIVE_CAPTURE.md。不得把 v22 分数或本地联合观察计时当作新候选的捕获成绩；保留 v22 冻结包直到新候选充分验证。
+- capture-v25 已实测 300 秒请求 / 299.9667 秒记录，seed101，9.27 分、2 报告、RMSE 8.7472 米、0 惩罚、0 清除。两次召集与接应确认成功，均因视觉恢复超时释放；官方 coop_ticks=0，未做完整 600 秒/多 seed 验证，不把短回合与 v22 直接比较。
+- 用户要求只保留最近版本并上传全部当前资产。当前 artifacts 保留 v22 得分基线、最新协同候选、appearance-v3 及依赖训练图片，以及验证记录和报告。旧资产移入 .local-archive/pre-v22-20260911；本轮失败中间包移入 .local-archive/capture-development，原始失败评分和诊断摘要保留。归档不加入 Git，不重写既有 Git 历史。
 - artifacts 使用 Git LFS，-text 保持冻结代码/权重/原始结果字节一致；本机环境、缓存和 accepted-local.jsonl 不提交。训练图片所在目录可能含旧名称，它们是当前 v22 的数据依赖，不能按名称删除。
 - 项目与 Git 根目录为 ZqhjGame；官方 SIM_ROOT 默认为父目录。自研写入仅在本项目内，官方 SDK、引擎、原场景和评分只读。保留未提交修改，不执行 reset/clean 或全局进程清理。
 - 在线 Agent 只用 obs.self、obs.comm_inbox、obs.briefing 与实例状态。队友状态经合法通信；禁止读取 Redis、隐藏路线、裁判真值、其他 Agent 对象和磁盘截图作为在线输入。

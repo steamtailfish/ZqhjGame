@@ -53,6 +53,17 @@ class EntryAgent(CoopAgent):
 
     def camera_fov(self,own,formation):return 50.
 
+    def coordinate(self,own,local,peers,frame,now):
+        return self.coordinator.assign(local,peers,frame,now)
+
+    def communication_payload(self,own,local,frame,now):
+        return self.radio.send(own,local,frame,now)
+
+    def orbit_radius(self,own,assignment):return 450.
+
+    def guidance(self,position,velocity,target,motions,obstacles,formation,radius):
+        return guide_heading(position,velocity,target,motions,obstacles,radius=radius,formation=formation)
+
     def decide(self, obs, dt):
         self.decision_count += 1
         now,state = self.clock.step(obs.briefing)
@@ -84,11 +95,11 @@ class EntryAgent(CoopAgent):
         peers = self.radio.receive(obs.comm_inbox,now)
         self.bank.update(self.perception_candidates(own),frame,now)
         local = self.coordinator.local_track(self.bank,now)
-        assignment = self.coordinator.assign(local,peers,frame,now)
+        assignment = self.coordinate(own,local,peers,frame,now)
         self.assignment=assignment
         delta = self.stats.update(own.comm_stats)
         commands = []
-        payload = self.radio.send(own,local,frame,now)
+        payload = self.communication_payload(own,local,frame,now)
         if payload is not None:
             commands.append(broadcast(payload))
         if now-self.last_control < .5-1e-9:
@@ -115,11 +126,12 @@ class EntryAgent(CoopAgent):
         formation = assignment.role in ('OBSERVE','ACQUIRE') and assignment.target is not None
         target = assignment.target if formation else self.search_goal(position,bounds)
         self.prepare_planner(own,target,formation,position)
-        desired = guide_heading(position,velocity,target,motions,obstacles,formation=formation)
+        radius = self.orbit_radius(own,assignment)
+        desired = self.guidance(position,velocity,target,motions,obstacles,formation,radius)
         self.on_planning_input(planning_record(position,own.heading_deg,own.speed,desired,motions,bounds,
                                               obstacles,target if formation else None),now)
         plan = self.planner.plan(position,own.heading_deg,own.speed,desired,motions,bounds,
-                                 obstacles,target if formation else None)
+                                 obstacles,target if formation else None,radius=radius)
         commands.extend(self.navigation_commands(own,plan,frame))
         if formation:
             dx,dy = target[0]-position[0],target[1]-position[1]
