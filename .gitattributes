@@ -1,2 +1,5 @@
 # Preserve byte-identical frozen packages, datasets and experiment evidence.
 artifacts/** filter=lfs diff=lfs merge=lfs -text
+
+# Keep source bytes identical to the evaluated package source manifest.
+src/zqhj_*.py -text

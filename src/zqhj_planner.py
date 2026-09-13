@@ -80,6 +80,8 @@ class PrimitivePlanner:
     step_s = .25
     command_s = .5
     cruise_speed = 22.
+    orbit_guidance_enabled = False
+    last_goal_mode = 'straight'
 
     def plan(self, position, heading, speed, desired_heading, peers=(), bounds=None,
              obstacles=(), target=None, radius=450.):
@@ -94,6 +96,18 @@ class PrimitivePlanner:
         cruise=max(15.,min(40.,self.cruise_speed))
         goal = (position[0]+cruise*self.horizon_s*math.sin(math.radians(desired_heading)),
                 position[1]+cruise*self.horizon_s*math.cos(math.radians(desired_heading)))
+        self.last_goal_mode = 'straight'
+        if (self.orbit_guidance_enabled and target is not None and radius > 0
+                and abs(math.dist(position,target)-radius) <= 60.):
+            # Follow the existing counterclockwise ENU orbit over the horizon.
+            # A tangent-line endpoint otherwise penalizes the orbit's curvature.
+            # SDK heading atan2(E,N) gives this orbit a negative heading rate.
+            angle = math.atan2(position[1]-target[1],position[0]-target[0])
+            angle += cruise*self.horizon_s/radius
+            goal = (target[0]+radius*math.cos(angle),target[1]+radius*math.sin(angle))
+            curvature_rate = max(-30.,min(30.,-math.degrees(cruise/radius)))
+            rates = sorted(set((*rates,curvature_rate)))
+            self.last_goal_mode = 'orbit_arc'
         plans = []
         for rate in rates:
             for desired_speed in sorted({15.,22.,30.,cruise}):
